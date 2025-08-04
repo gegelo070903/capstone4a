@@ -1,0 +1,112 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    height: 100vh;
+}
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 220px;
+    height: 100vh;
+    background: #222;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 40px;
+}
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.sidebar li {
+    width: 100%;
+}
+.sidebar a {
+    display: block;
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 15px 28px;
+    transition: background 0.2s, color 0.2s;
+}
+.sidebar a:hover, .sidebar a:focus {
+    color: #f5c542;
+    background: #333;
+}
+.main-content {
+    margin-left: 220px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+table {
+    border-collapse: collapse;
+    margin: 0 auto;             /* Center the table horizontally */
+    width: 80%;                 /* Optional: set desired width */
+}
+th, td {
+    border: 1px solid #111;     /* Dark border for clarity */
+    padding: 8px 12px;
+    text-align: center;
+}
+th {
+    background: #eee;
+}
+
+.add-material-form-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin-right: 60px; /* Adjust distance from the right edge */
+}
+
+.add-material-form {
+    margin-top: 80px;
+    background: #fff;
+    padding: 32px 32px 24px 32px;
+    border-radius: 8px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+}
+
+.add-material-form label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    text-align: left;
+}
+
+.add-material-form input[type="text"],
+.add-material-form input[type="number"],
+.add-material-form input[type="date"],
+.add-material-form input[type="time"] {
+    width: 250px;
+    padding: 8px;
+    margin-bottom: 14px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    box-sizing: border-box;
+    display: block;
+}
+
+.add-material-form button {
+    width: 100px;
+    padding: 7px 0;
+    border: none;
+    background: #222;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.add-material-form button:hover {
+    background: #444;
+}
