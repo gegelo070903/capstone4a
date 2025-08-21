@@ -31,9 +31,11 @@ body {
     box-shadow: 2px 0 10px rgba(0,0,0,0.05) !important;
 }
 
-/* Logo container at the top */
-.sidebar > div:first-child {
-    padding: 25px 20px 20px 20px !important;
+/* --- MODIFIED & NEW CSS FOR THE LOGO --- */
+
+/* Replaced '.sidebar > div:first-child' with this dedicated class */
+.sidebar-logo {
+    padding: 1px 1px 1px 1px !important;
     border-bottom: 1px solid #e1e8ed !important;
     text-align: center !important;
     background: #ffffff !important;
@@ -41,14 +43,32 @@ body {
     order: -1 !important;
 }
 
-/* Logo image */
+/* The link containing the logo */
+.sidebar-logo a {
+    display: inline-block !important; /* Helps with positioning */
+    transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out !important; /* Smooth animation */
+}
+
+/* The "Facebook-style" hover effect */
+.sidebar-logo a:hover {
+    opacity: 0.85 !important; /* Makes the logo slightly transparent */
+    transform: scale(1.05) !important; /* Makes the logo slightly bigger */
+
+    /* These lines PREVENT the default link hover effect (with the blue border) from applying to the logo */
+    background: transparent !important;
+    border-left: 3px solid transparent !important;
+}
+
+/* Logo image (no changes here, just moved for organization) */
 .sidebar img {
     max-width: 150px !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto !important;
-    margin-right: 10px !important;
 }
+
+/* --- END OF LOGO CHANGES --- */
+
 
 /* Navigation list */
 .sidebar ul {
@@ -78,9 +98,9 @@ body {
     border-left: 3px solid transparent !important;
 }
 
-/* Hover effects */
-.sidebar a:hover,
-.sidebar a:focus {
+/* Hover effects for regular navigation links */
+.sidebar ul a:hover,
+.sidebar ul a:focus {
     color: #1976d2 !important;
     background: #f8f9fa !important;
     border-left: 3px solid #1976d2 !important;
@@ -107,6 +127,8 @@ body {
     align-items: flex-start;
     text-align: left;
 }
+
+/* (The rest of your CSS file remains exactly the same...) */
 
 /* Dashboard Welcome Section */
 .main-content h1 {
