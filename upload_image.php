@@ -3,15 +3,20 @@ include 'includes/db.php';
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle file upload
     if ($_FILES['proof_image']['error'] == 0) {
-        $target = 'uploads/' . basename($_FILES['proof_image']['name']);
-        move_uploaded_file($_FILES['proof_image']['tmp_name'], $target);
+        $ext = strtolower(pathinfo($_FILES['proof_image']['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+        if (in_array($ext, $allowed)) {
+            if (!is_dir("uploads")) mkdir("uploads", 0775, true);
+            $target = 'uploads/' . uniqid('proof_', true) . '.' . $ext;
+            move_uploaded_file($_FILES['proof_image']['tmp_name'], $target);
+        } else {
+            $target = null;
+        }
     } else {
         $target = null;
     }
 
-    // Save to database
     $stmt = $conn->prepare("INSERT INTO construction_reports (constructor_id, report_date, start_time, end_time, status, description, proof_image, materials_left) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->bind_param('isssssss',
         $_POST['user_id'],

@@ -1,4 +1,5 @@
 <?php
+// connection sang database
 $host = "localhost";
 $user = "root";
 $pass = "";

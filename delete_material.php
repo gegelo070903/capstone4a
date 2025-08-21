@@ -1,4 +1,5 @@
 <?php
+// delete material 
 include 'includes/db.php';
 include 'includes/auth.php';
 

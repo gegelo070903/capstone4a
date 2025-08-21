@@ -1,4 +1,5 @@
 <?php
+// log in function nga may administrative role
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
