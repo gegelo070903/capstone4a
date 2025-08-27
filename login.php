@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($password === $user['password']) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
+            $_SESSION['user_role'] = $user['role'];
             header("Location: dashboard.php");
             exit();
         } else {
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
     <div class="login-container">
         <div class="login-header">
-            <img src="images/Sunshine Sapphire  Construction and Supply Logo.png" alt="Sunshine Sapphire Logo" class="logo">
+            <img src="images/Sunshine Sapphire Construction and Supply Logo.png" alt="Sunshine Sapphire Logo" class="logo">
             <h1 class="login-title">Login</h1>
         </div>
 
