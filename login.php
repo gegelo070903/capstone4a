@@ -37,38 +37,161 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         /* All the CSS from the previous step remains exactly the same */
-        body {
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-        .login-container {
-            background-color: #ffffff;
-            padding: 30px 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-        }
-        .login-header { margin-bottom: 20px; }
-        .logo { max-width: 120px; height: auto; margin-bottom: 10px; }
-        .login-title { font-size: 2.5rem; font-weight: bold; margin-bottom: 5px; margin-top: 0; }
-        .login-subtitle { color: #6c757d; margin-bottom: 25px; font-size: 1.1rem; margin-top: 0; }
-        .login-form { text-align: left; }
-        .form-group { margin-bottom: 15px; }
-        .password-wrapper { position: relative; display: flex; align-items: center; }
-        .form-label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .form-input { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; }
-        #password { padding-right: 40px; }
-        .toggle-password-icon { position: absolute; right: 15px; cursor: pointer; color: #888; }
-        .login-button { width: 100%; padding: 12px; background-color: #000000; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 10px; }
-        .login-button:hover { background-color: #333; }
-        .error-message { background-color: #f8d7da; color: #721c24; padding: 10px; border: 1px solid #f5c6cb; border-radius: 6px; margin-bottom: 15px; }
+/* --- Start of updated CSS --- */
+
+body {
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    padding: 20px;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden; 
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: -15%;
+    width: 500px;
+    height: 500px;
+    background-image: linear-gradient(135deg, #007bff, #c2e9fb);
+    border-radius: 50%;
+    opacity: 0.4;
+    z-index: -1;
+    filter: blur(50px);
+}
+
+body::after {
+    content: '';
+    position: absolute;
+    bottom: -25%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background-image: linear-gradient(135deg, #ffc107, #fff1c9);
+    border-radius: 50%;
+    opacity: 0.3;
+    z-index: -1;
+    filter: blur(60px);
+}
+
+.login-container {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 25px 60px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+.login-header {
+    /* --- EDITED THIS LINE --- */
+    margin-bottom: 15px; /* Reduced space below the header */
+}
+
+.logo {
+    max-width: 140px;
+    height: auto;
+    margin-bottom: 15px;
+}
+
+.login-title {
+    font-size: 2.2rem;
+    font-weight: bold;
+    margin: 0;
+    color: #333;
+}
+
+.login-form {
+    text-align: left;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+}
+
+.form-input {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+    outline: none;
+}
+
+#password {
+    padding-right: 45px;
+}
+
+.toggle-password-icon {
+    position: absolute;
+    right: 15px;
+    cursor: pointer;
+    color: #888;
+    font-size: 1.2rem;
+}
+
+.login-button {
+    width: 100%;
+    padding: 15px;
+    background-color: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.login-button:hover {
+    background-color: #333;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 12px;
+    border: 1px solid #f5c6cb;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    text-align:center;
+}
+
+/* --- End of updated CSS --- */
     </style>
 </head>
 <body>

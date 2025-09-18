@@ -1,7 +1,7 @@
 <?php
 
 // ======================================================================
-// FIX 1: Only start a session if one is not already active.
+// Only start a session if one is not already active.
 // This prevents the "session is already active" error.
 // ======================================================================
 if (session_status() === PHP_SESSION_NONE) {
@@ -16,7 +16,7 @@ if (!isset($_SESSION['user_id'])) {
 
 
 // ======================================================================
-// FIX 2: Update functions to use the correct session variable: 'user_role'.
+// Update functions to use the correct session variable: 'user_role'.
 // This ensures consistency with your login script and all other pages.
 // ======================================================================
 
