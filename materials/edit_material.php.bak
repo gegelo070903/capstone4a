@@ -40,7 +40,7 @@ if (!$material && !empty($error_message)) {
     include 'includes/header.php'; // Include header before any HTML output
     echo '<div class="main-content-wrapper">';
     echo '<div class="alert error">' . htmlspecialchars($error_message) . '</div>';
-    echo '<p class="text-center"><a href="materials\supply_monitoring.php" class="btn btn-secondary">Back to Supply Monitoring</a></p>';
+    echo '<p class="text-center"><a href="materials\materials\supply_monitoring.php" class="btn btn-secondary">Back to Supply Monitoring</a></p>';
     echo '</div>';
     include 'includes/footer.php';
     exit(); // IMPORTANT: Exit here to prevent further script execution
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $material) { // Ensure $material ex
 
     // Double check that the ID from POST matches the ID we loaded
     if ($material_id_from_post !== $material_id) {
-        header("Location: materials\supply_monitoring.php?status=material_updated_error&message=" . urlencode("Security error: Material ID mismatch."));
+        header("Location: materials\materials\supply_monitoring.php?status=material_updated_error&message=" . urlencode("Security error: Material ID mismatch."));
         exit();
     }
 
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $material) { // Ensure $material ex
         $stmt_update->bind_param("sisddssi", $name, $quantity, $unit_of_measurement, $price, $total_amount, $supplier, $purpose, $material_id);
 
         if ($stmt_update->execute()) {
-            header("Location: materials\supply_monitoring.php?status=material_updated_success");
+            header("Location: materials\materials\supply_monitoring.php?status=material_updated_success");
             exit();
         } else {
             $status_message = '<div class="alert error">Error updating material: ' . $stmt_update->error . '</div>';
@@ -299,7 +299,7 @@ textarea {
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Update Material</button>
-                <a href="materials\supply_monitoring.php" class="btn btn-secondary">Cancel</a>
+                <a href="materials\materials\supply_monitoring.php" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>

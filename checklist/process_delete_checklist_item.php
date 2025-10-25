@@ -2,16 +2,52 @@
 // ===============================================================
 // process_delete_checklist_item.php
 // Deletes a checklist item (admin-only).
-// Called via fetch() in view_project.php; we return 204 or a tiny JSON.
+// Called via fetch() in view_project.php; returns 204 or JSON response.
 // ===============================================================
 
-require_once __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/functions.php';
+// ---------------------------------------------------------------
+// 0) Include dependencies
+// Adjusted paths: this file is in /checklist so we go up one level
+// ---------------------------------------------------------------
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../auth/functions.php';
 
+// ---------------------------------------------------------------
+// 0.1) Define lightweight helper functions if missing
+// ---------------------------------------------------------------
+if (!function_exists('require_csrf')) {
+    function require_csrf(): void {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (session_status() === PHP_SESSION_NONE) { session_start(); }
+            $t   = $_POST['csrf_token'] ?? '';
+            $ref = $_SESSION['csrf_token'] ?? '';
+            if (!$t || !$ref || !hash_equals($ref, $t)) {
+                http_response_code(400);
+                exit(json_encode(['success' => false, 'message' => 'Invalid CSRF token.']));
+            }
+        }
+    }
+}
+if (!function_exists('post_int')) {
+    function post_int(string $key): ?int {
+        if (!isset($_POST[$key])) return null;
+        $v = trim((string)$_POST[$key]);
+        if ($v === '' || !ctype_digit($v)) return null;
+        return (int)$v;
+    }
+}
+
+// ---------------------------------------------------------------
+// 1) Security: Login + CSRF protection
+// ---------------------------------------------------------------
 require_login();
 require_csrf();
 
-// 1) Input
+// ---------------------------------------------------------------
+// 2) Input validation
+// ---------------------------------------------------------------
+header('Content-Type: application/json');
 $id = post_int('id');
 if (!$id) {
     http_response_code(400);
@@ -19,14 +55,18 @@ if (!$id) {
     exit;
 }
 
-// 2) Enforce admin
+// ---------------------------------------------------------------
+// 3) Authorization: Only admins can delete items
+// ---------------------------------------------------------------
 if (!is_admin()) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Forbidden.']);
     exit;
 }
 
-// 3) Optional: ensure item exists (and grab project_id if you want to redirect)
+// ---------------------------------------------------------------
+// 4) Integrity: Ensure item exists
+// ---------------------------------------------------------------
 $stmt = $conn->prepare('SELECT id FROM project_checklists WHERE id = ? LIMIT 1');
 $stmt->bind_param('i', $id);
 $stmt->execute();
@@ -40,7 +80,9 @@ if (!$exists) {
     exit;
 }
 
-// 4) Delete
+// ---------------------------------------------------------------
+// 5) Delete the checklist item
+// ---------------------------------------------------------------
 $stmt = $conn->prepare('DELETE FROM project_checklists WHERE id = ? LIMIT 1');
 $stmt->bind_param('i', $id);
 $ok = $stmt->execute();
@@ -52,5 +94,9 @@ if (!$ok) {
     exit;
 }
 
-// Success — your page just reloads, so 204 is fine.
+// ---------------------------------------------------------------
+// 6) Success — 204 No Content (fetch() caller handles UI reload)
+// ---------------------------------------------------------------
 http_response_code(204);
+exit;
+?>

@@ -570,7 +570,7 @@ td .constructor-name {
                 </select>
             </div>
             <?php if (is_admin()): ?>
-                <a href="materials\add_material.php" class="btn btn-primary">Add New Material</a>
+                <a href="add_material.php" class="btn btn-primary">Add New Material</a>
             <?php endif; ?>
         </div>
     </div>

@@ -5,8 +5,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// bring in DB connection ($conn = new mysqli(...))
-require_once __DIR__ . '/includes/db.php';
+// ======================================================================
+// Bring in the database connection
+// Adjusted path to correctly locate /includes/db.php
+// ======================================================================
+require_once __DIR__ . '/../includes/db.php';
 
 // Basic helpers
 function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
@@ -28,7 +31,7 @@ function check_csrf() {
 
 // If already logged in, go to dashboard
 if (!empty($_SESSION['user_id'])) {
-    header('Location: dashboard.php');
+    header('Location: ../dashboard.php');
     exit;
 }
 
@@ -47,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Fetch user by username (prepared)
         $stmt = $conn->prepare('SELECT id, username, password, role FROM users WHERE username = ? LIMIT 1');
         if (!$stmt) {
-            // Fail closed
             $error = 'Unexpected error. Please try again.';
         } else {
             $stmt->bind_param('s', $username);
@@ -58,15 +60,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user) {
                 $stored = (string)$user['password'];
-
                 $looksHashed = str_starts_with($stored, '$2y$') || str_starts_with($stored, '$argon2') || str_starts_with($stored, '$2a$');
-
                 $ok = false;
 
                 if ($looksHashed) {
                     // Modern path
                     $ok = password_verify($password, $stored);
-                    // Rehash if needed (algorithm upgrades)
                     if ($ok && password_needs_rehash($stored, PASSWORD_DEFAULT)) {
                         $newHash = password_hash($password, PASSWORD_DEFAULT);
                         $up = $conn->prepare('UPDATE users SET password = ? WHERE id = ?');
@@ -77,8 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 } else {
-                    // Backward-compat for existing plain-text passwords in DB
-                    // Compare directly, then upgrade to hashed on success
+                    // Legacy plaintext support
                     if (hash_equals($stored, $password)) {
                         $ok = true;
                         $newHash = password_hash($password, PASSWORD_DEFAULT);
@@ -98,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['username']  = (string)$user['username'];
                     $_SESSION['user_role'] = (string)$user['role'];
 
-                    header('Location: dashboard.php');
+                    header('Location: ../dashboard.php');
                     exit;
                 } else {
                     $error = 'Invalid credentials.';

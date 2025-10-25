@@ -10,7 +10,7 @@
 </div> <!-- Closes the 'page-wrapper' div from header.php -->
 
 <!-- You can add global JavaScript files here if needed -->
-<!-- <script src="js/main.js"></script> -->
+<!-- <script src="assets\js\main.js"></script> -->
 
 </body>
 </html>

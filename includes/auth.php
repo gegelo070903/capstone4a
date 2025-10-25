@@ -8,12 +8,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// ======================================================================
 // Redirect to login page if user is not logged in at all.
+// ======================================================================
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: ../auth/login.php");
     exit();
 }
-
 
 // ======================================================================
 // Update functions to use the correct session variable: 'user_role'.
@@ -35,5 +36,4 @@ function is_admin() {
 function is_constructor() {
     return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'constructor';
 }
-
 ?>
