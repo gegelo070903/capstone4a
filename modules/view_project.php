@@ -1,167 +1,212 @@
 <?php
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/functions.php';
-require_login();
+// ======================================
+// view_project.php — Final Version
+// ======================================
 
+include '../includes/db.php';
+include '../includes/functions.php';
+
+require_login();
+if (!is_admin()) {
+    die('<h3 style="color:red;">Access denied. Only admins can view projects.</h3>');
+}
+
+date_default_timezone_set('Asia/Manila');
+
+// ✅ Get project ID safely
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    exit("<h3>Invalid project ID.</h3>");
+    die('<h3 style="color:red;">Invalid project ID.</h3>');
 }
 $project_id = intval($_GET['id']);
 
-$project = $conn->query("SELECT * FROM projects WHERE id = $project_id")->fetch_assoc();
-if (!$project) exit("<h3>Project not found.</h3>");
+// ✅ Fetch project details
+$stmt = $conn->prepare("SELECT * FROM projects WHERE id = ?");
+$stmt->bind_param("i", $project_id);
+$stmt->execute();
+$project = $stmt->get_result()->fetch_assoc();
 
-// Units (houses)
-$units = $conn->query("SELECT * FROM project_units WHERE project_id = $project_id ORDER BY id ASC");
+if (!$project) {
+    die('<h3 style="color:red;">Project not found.</h3>');
+}
 
-// Checklist items
-$checklists = $conn->query("SELECT * FROM project_checklists WHERE project_id = $project_id ORDER BY id ASC");
+// ✅ Fetch all units for this project
+$stmt_units = $conn->prepare("SELECT * FROM project_units WHERE project_id = ?");
+$stmt_units->bind_param("i", $project_id);
+$stmt_units->execute();
+$units_result = $stmt_units->get_result();
 
-// Materials
-$materials = $conn->query("SELECT * FROM materials WHERE project_id = $project_id ORDER BY id DESC");
+// ✅ Count total units and completed progress
+$total_units = $units_result->num_rows;
+$total_progress = 0;
 
-// Daily reports
-$reports = $conn->query("
-    SELECT * FROM construction_reports 
-    WHERE project_id = $project_id 
-    ORDER BY report_date DESC
-");
-require_once __DIR__ . '/../includes/header.php';
+$units = [];
+while ($row = $units_result->fetch_assoc()) {
+    $units[] = $row;
+    $total_progress += intval($row['progress']);
+}
+
+$overall_progress = $total_units > 0 ? round($total_progress / $total_units) : 0;
+
+// ✅ Auto-update project status based on progress
+if ($overall_progress >= 100) {
+    $new_status = "Completed";
+} elseif ($overall_progress > 0) {
+    $new_status = "Ongoing";
+} else {
+    $new_status = "Pending";
+}
+
+$conn->query("UPDATE projects SET status='$new_status' WHERE id=$project_id");
+
+include '../includes/header.php';
 ?>
 
-<style>
-.main-content-wrapper { padding: 25px; background: #f8fafc; min-height: 100vh; }
-.card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 25px 30px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    margin-bottom: 25px;
-}
-.card h3 { margin-top: 0; color: #111827; }
-
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; }
-.table th { background: #f3f4f6; font-weight: 600; color: #374151; }
-.badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; }
-.badge.Pending { background-color: #fbbf24; }
-.badge.Ongoing { background-color: #3b82f6; }
-.badge.Completed { background-color: #22c55e; }
-.btn {
-    background-color: #2563eb; color: #fff; padding: 8px 16px;
-    border-radius: 6px; text-decoration: none; font-size: 14px;
-    font-weight: 600; margin-right: 6px; display: inline-block;
-}
-.btn:hover { background-color: #1d4ed8; }
-</style>
-
 <div class="main-content-wrapper">
+    <div class="project-header-card">
+        <h2><?= htmlspecialchars($project['name']); ?></h2>
+        <p><strong>Status:</strong> 
+            <span class="status <?= strtolower($project['status']); ?>"><?= htmlspecialchars($project['status']); ?></span> |
+            <strong>Location:</strong> <?= htmlspecialchars($project['location']); ?> |
+            <strong>Units:</strong> <?= $project['units']; ?> |
+            <strong>Created:</strong> <?= date('M d, Y', strtotime($project['created_at'])); ?>
+        </p>
 
-  <div class="card">
-    <h2><?= htmlspecialchars($project['name']) ?></h2>
-    <p>
-      <strong>Status:</strong> 
-      <span class="badge <?= htmlspecialchars($project['status']) ?>"><?= htmlspecialchars($project['status']) ?></span> &nbsp;|
-      <strong>Location:</strong> <?= htmlspecialchars($project['location']) ?> &nbsp;|
-      <strong>Units:</strong> <?= htmlspecialchars($project['units']) ?> &nbsp;|
-      <strong>Created:</strong> <?= date('M d, Y', strtotime($project['created_at'])) ?>
-    </p>
+        <div class="progress-container">
+            <div class="progress-bar" style="width: <?= $overall_progress; ?>%;"><?= $overall_progress; ?>%</div>
+        </div>
 
-    <?php if (is_admin()): ?>
-      <a href="edit_project.php?id=<?= $project_id ?>" class="btn">Edit</a>
-      <a href="delete_project.php?id=<?= $project_id ?>" class="btn" style="background-color:#dc2626;">Delete</a>
-    <?php endif; ?>
-  </div>
+        <div class="project-actions">
+            <a href="../checklist/add_checklist_item.php?project_id=<?= $project_id; ?>" class="btn btn-primary">
+                <i class="fas fa-tasks"></i> Add Checklist
+            </a>
+            <a href="edit_project.php?id=<?= $project_id; ?>" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit Project
+            </a>
+            <a href="delete_project.php?id=<?= $project_id; ?>" class="btn btn-danger" onclick="return confirm('Move this project to trash?');">
+                <i class="fas fa-trash"></i> Delete
+            </a>
+        </div>
+    </div>
 
-  <div class="card">
-    <h3>🏠 Unit Checklist</h3>
-    <?php if ($checklists->num_rows > 0): ?>
-      <table class="table">
-        <thead>
-          <tr><th>Unit</th><th>Task</th><th>Status</th><th>Date</th></tr>
-        </thead>
-        <tbody>
-        <?php while ($c = $checklists->fetch_assoc()): ?>
-          <tr>
-            <td><?= htmlspecialchars($c['unit_id'] ?? '-') ?></td>
-            <td><?= htmlspecialchars($c['item_description']) ?></td>
-            <td><?= $c['is_completed'] ? '✅ Completed' : '⬜ Pending' ?></td>
-            <td><?= $c['completed_at'] ? date('M d, Y', strtotime($c['completed_at'])) : '-' ?></td>
-          </tr>
-        <?php endwhile; ?>
-        </tbody>
-      </table>
-    <?php else: ?>
-      <p style="color:#6b7280;">No checklist items found.</p>
-    <?php endif; ?>
-  </div>
+    <div class="units-section">
+        <h3>🏘️ Project Units</h3>
 
-  <div class="card">
-    <h3>📦 Materials Used</h3>
-    <?php if ($materials->num_rows > 0): ?>
-      <table class="table">
-        <thead>
-          <tr><th>Name</th><th>Quantity</th><th>Unit</th><th>Purpose</th></tr>
-        </thead>
-        <tbody>
-        <?php while ($m = $materials->fetch_assoc()): ?>
-          <tr>
-            <td><?= htmlspecialchars($m['name']) ?></td>
-            <td><?= htmlspecialchars($m['quantity']) ?></td>
-            <td><?= htmlspecialchars($m['unit_of_measurement']) ?></td>
-            <td><?= htmlspecialchars($m['purpose']) ?></td>
-          </tr>
-        <?php endwhile; ?>
-        </tbody>
-      </table>
-    <?php else: ?>
-      <p style="color:#6b7280;">No materials added yet.</p>
-    <?php endif; ?>
-
-    <a href="../modules/add_material.php?project_id=<?= $project_id ?>" class="btn">+ Add Material</a>
-  </div>
-
-  <div class="card">
-    <h3>📅 Daily Reports</h3>
-    <?php if ($reports->num_rows > 0): ?>
-      <table class="table">
-        <thead>
-          <tr><th>Date</th><th>Status</th><th>Description</th><th>Materials Used</th></tr>
-        </thead>
-        <tbody>
-        <?php while ($r = $reports->fetch_assoc()): ?>
-          <?php
-          $materials_used = $conn->query("
-            SELECT m.name, rmu.quantity_used, m.unit_of_measurement
-            FROM report_material_usage rmu
-            JOIN materials m ON m.id = rmu.material_id
-            WHERE rmu.report_id = {$r['id']}
-          ");
-          ?>
-          <tr>
-            <td><?= date('M d, Y', strtotime($r['report_date'])) ?></td>
-            <td><span class="badge <?= htmlspecialchars($r['status']) ?>"><?= htmlspecialchars($r['status']) ?></span></td>
-            <td><?= htmlspecialchars($r['description']) ?></td>
-            <td>
-              <?php if ($materials_used->num_rows > 0): ?>
-                <ul style="margin:0;padding-left:18px;">
-                  <?php while ($mu = $materials_used->fetch_assoc()): ?>
-                    <li><?= htmlspecialchars($mu['quantity_used'].' '.$mu['unit_of_measurement'].' '.$mu['name']) ?></li>
-                  <?php endwhile; ?>
-                </ul>
-              <?php else: ?>—<?php endif; ?>
-            </td>
-          </tr>
-        <?php endwhile; ?>
-        </tbody>
-      </table>
-    <?php else: ?>
-      <p style="color:#6b7280;">No daily reports yet.</p>
-    <?php endif; ?>
-
-    <a href="../modules/add_report.php?project_id=<?= $project_id ?>" class="btn">+ Add Daily Report</a>
-  </div>
+        <?php if (count($units) > 0): ?>
+            <?php foreach ($units as $unit): ?>
+                <div class="unit-card">
+                    <h4><?= htmlspecialchars($unit['name']); ?></h4>
+                    <p><?= !empty($unit['description']) ? htmlspecialchars($unit['description']) : "No description"; ?></p>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: <?= $unit['progress']; ?>%;">
+                            <?= $unit['progress']; ?>%
+                        </div>
+                    </div>
+                    <div class="unit-actions">
+                        <a href="../checklist/view_checklist.php?unit_id=<?= $unit['id']; ?>&project_id=<?= $project_id; ?>" class="btn btn-outline-primary">
+                            <i class="fas fa-list-check"></i> View Checklist
+                        </a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <p class="no-units">No units defined yet for this project.</p>
+        <?php endif; ?>
+    </div>
 </div>
 
-</body>
-</html>
+<style>
+.main-content-wrapper {
+    padding: 20px;
+    background: #f8f9fc;
+}
+
+.project-header-card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+}
+
+.status {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #fff;
+}
+.status.pending { background-color: #ffc107; }
+.status.ongoing { background-color: #17a2b8; }
+.status.completed { background-color: #28a745; }
+
+.progress-container {
+    width: 100%;
+    height: 22px;
+    background: #e9ecef;
+    border-radius: 12px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    text-align: center;
+    color: #fff;
+    background: #007bff;
+    line-height: 22px;
+    font-size: 13px;
+    transition: width 0.4s ease;
+}
+
+.project-actions a {
+    margin-right: 10px;
+}
+
+.units-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.unit-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #fafafa;
+}
+
+.unit-card h4 {
+    margin: 0 0 10px;
+    font-size: 1.1em;
+    color: #333;
+}
+
+.unit-actions {
+    margin-top: 10px;
+}
+
+.btn {
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    display: inline-block;
+    font-weight: 600;
+}
+.btn-primary { background: #007bff; color: #fff; }
+.btn-warning { background: #ffc107; color: #212529; }
+.btn-danger { background: #dc3545; color: #fff; }
+.btn-outline-primary {
+    border: 1px solid #007bff;
+    color: #007bff;
+    background: transparent;
+}
+.btn-outline-primary:hover {
+    background: #007bff;
+    color: #fff;
+}
+.no-units {
+    color: #888;
+    font-style: italic;
+    text-align: center;
+}
+</style>
