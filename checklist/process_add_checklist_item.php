@@ -1,6 +1,6 @@
 <?php
 // ============================================
-// process_add_checklist_item.php — Final Version
+// process_add_checklist_item.php — Final Safe Version (No Duplicates)
 // ============================================
 
 require_once __DIR__ . '/../includes/db.php';
@@ -33,23 +33,44 @@ $unit_id = isset($_POST['unit_id']) && $_POST['unit_id'] !== '' ? (int)$_POST['u
 try {
     $conn->begin_transaction();
 
+    // --- 4. Prepare insert statement ---
+    $stmt = $conn->prepare("
+        INSERT INTO project_checklists (project_id, unit_id, item_description, is_completed, created_at)
+        VALUES (?, ?, ?, 0, NOW())
+    ");
+
+    // --- 5. Apply to All Units ---
     if ($apply_mode === 'all') {
-        // ✅ Apply checklist item to ALL UNITS in this project
         $units = $conn->query("SELECT id FROM project_units WHERE project_id = $project_id");
         while ($u = $units->fetch_assoc()) {
-            $stmt = $conn->prepare("INSERT INTO project_checklists (project_id, unit_id, item_description, is_completed, created_at) VALUES (?, ?, ?, 0, NOW())");
-            $stmt->bind_param("iis", $project_id, $u['id'], $item_description);
-            $stmt->execute();
+            try {
+                $stmt->bind_param("iis", $project_id, $u['id'], $item_description);
+                $stmt->execute();
+            } catch (mysqli_sql_exception $e) {
+                // Skip duplicates silently
+                if ($e->getCode() == 1062) continue; 
+                throw $e;
+            }
         }
-    } else {
-        // ✅ Apply only to selected unit or general (no unit)
-        $stmt = $conn->prepare("INSERT INTO project_checklists (project_id, unit_id, item_description, is_completed, created_at) VALUES (?, ?, ?, 0, NOW())");
-        $stmt->bind_param("iis", $project_id, $unit_id, $item_description);
-        $stmt->execute();
+    } 
+    // --- 6. Apply to single unit or general ---
+    else {
+        try {
+            $stmt->bind_param("iis", $project_id, $unit_id, $item_description);
+            $stmt->execute();
+        } catch (mysqli_sql_exception $e) {
+            if ($e->getCode() == 1062) {
+                // Duplicate entry detected
+                $conn->rollback();
+                header("Location: ../modules/view_project.php?id=$project_id&status=duplicate_item&message=" . urlencode("This checklist item already exists for this unit."));
+                exit();
+            } else {
+                throw $e;
+            }
+        }
     }
 
     $conn->commit();
-
     header("Location: ../modules/view_project.php?id=$project_id&status=checklist_item_added_success");
     exit();
 
@@ -58,3 +79,4 @@ try {
     header("Location: ../modules/view_project.php?id=$project_id&status=checklist_item_added_error&message=" . urlencode($e->getMessage()));
     exit();
 }
+?>

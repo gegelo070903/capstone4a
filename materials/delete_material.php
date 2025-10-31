@@ -1,14 +1,23 @@
 <?php
-// delete material 
-include 'includes/db.php';
-include 'includes/auth.php';
+require_once '../includes/db.php';
+require_once '../includes/functions.php';
+require_login();
 
-if (!is_admin()) {
-    header("Location: supply_monitoring.php");
-    exit();
+// Validate parameters
+if (!isset($_GET['id']) || !isset($_GET['project_id'])) {
+    die('<h3 style="color:red;">Invalid parameters provided.</h3>');
 }
+
 $id = intval($_GET['id']);
-$conn->query("DELETE FROM materials WHERE id=$id");
-header("Location: supply_monitoring.php");
-exit();
+$project_id = intval($_GET['project_id']);
+
+// Delete material immediately
+$stmt = $conn->prepare("DELETE FROM materials WHERE id = ?");
+$stmt->bind_param("i", $id);
+if ($stmt->execute()) {
+    header("Location: ../modules/view_project.php?id=$project_id");
+    exit;
+} else {
+    echo "<h3 style='color:red;'>Error deleting material. Please try again.</h3>";
+}
 ?>

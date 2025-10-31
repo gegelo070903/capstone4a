@@ -164,3 +164,133 @@ function require_csrf(): void {
         exit('Invalid CSRF token.');
     }
 }
+
+
+// ---------------------------------------------------------------
+// ADDITIONAL HELPERS FOR REPORTS MODULE
+// ---------------------------------------------------------------
+
+// ✅ Generate CSRF token (alias for compatibility with add_report.php)
+function csrf_token(): string {
+    ensure_session_started();
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+// ✅ Verify CSRF token validity
+function verify_csrf_token(string $token): bool {
+    ensure_session_started();
+    // Use hash_equals for constant time comparison to mitigate timing attacks
+    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+// ✅ Ensure a directory exists (for image uploads)
+function ensure_dir(string $path): void {
+    // Check if the directory exists AND if it's writable/creatable
+    if (!is_dir($path)) {
+        // Use recursive option (true) and safe permissions (0755)
+        if (!mkdir($path, 0755, true)) {
+            error_log("Failed to create directory: $path");
+        }
+    }
+}
+
+// ✅ Clean file names (avoid special characters)
+function safe_filename(string $name): string {
+    // Replace sequences of non-alphanumeric, non-hyphen, non-underscore, non-dot characters with a single underscore
+    $name = preg_replace('/[^a-zA-Z0-9-_\.]/', '_', $name);
+    // Remove any leading/trailing dots or underscores
+    return trim($name, '._');
+}
+
+// ✅ Save uploaded report images safely
+function save_report_image(array $file, string $destDir): array {
+    $allowed = [
+        'image/jpeg' => '.jpg',
+        'image/png'  => '.png',
+        'image/webp' => '.webp'
+    ];
+
+    if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+        $code = $file['error'] ?? -1;
+        // Provide more readable error messages for common codes
+        $errorMessage = match($code) {
+            UPLOAD_ERR_INI_SIZE   => 'File exceeds upload_max_filesize.',
+            UPLOAD_ERR_FORM_SIZE  => 'File exceeds MAX_FILE_SIZE in form.',
+            UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded.',
+            UPLOAD_ERR_NO_FILE    => 'No file was uploaded.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing a temporary folder.',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+            default               => "Upload error code $code"
+        };
+        return [false, $errorMessage];
+    }
+
+    // Use finfo to check the actual MIME type (more secure than just file extension)
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime  = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+
+    if (!isset($allowed[$mime])) {
+        return [false, 'Unsupported file type: ' . $mime];
+    }
+
+    $ext = $allowed[$mime];
+    $base = pathinfo($file['name'], PATHINFO_FILENAME);
+    // Create a unique, timestamped file name
+    $newName = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '_' . safe_filename($base) . $ext;
+
+    ensure_dir($destDir);
+    $target = rtrim($destDir, '/\\') . DIRECTORY_SEPARATOR . $newName;
+
+    if (!move_uploaded_file($file['tmp_name'], $target)) {
+        return [false, 'Failed to move file to destination: check permissions'];
+    }
+
+    return [true, $newName];
+}
+
+// ✅ Deduct material quantities safely (transaction-safe)
+function deduct_material_quantity(mysqli $conn, int $materialId, int $qty): array {
+    if ($qty <= 0) return [true, ''];
+
+    // Start a transaction for integrity
+    $conn->begin_transaction();
+
+    try {
+        // Lock the material row to prevent race conditions during read/update
+        $stmt = $conn->prepare("SELECT remaining_quantity FROM materials WHERE id = ? FOR UPDATE");
+        if (!$stmt) throw new Exception('Prepare failed: ' . $conn->error);
+        $stmt->bind_param('i', $materialId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $stmt->close();
+
+        if ($result->num_rows === 0) throw new Exception('Material not found');
+
+        $row = $result->fetch_assoc();
+        $remaining = (int)$row['remaining_quantity'];
+
+        if ($remaining < $qty) {
+            throw new Exception('Insufficient stock: Available ' . $remaining . ', Requested ' . $qty);
+        }
+
+        $newRemaining = $remaining - $qty;
+        $update = $conn->prepare("UPDATE materials SET remaining_quantity = ? WHERE id = ?");
+        if (!$update) throw new Exception('Update prepare failed: ' . $conn->error);
+        $update->bind_param('ii', $newRemaining, $materialId);
+
+        if (!$update->execute()) throw new Exception('Failed to update material: ' . $update->error);
+        $update->close();
+        
+        $conn->commit();
+        return [true, ''];
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log("Deduct material error: " . $e->getMessage());
+        return [false, $e->getMessage()];
+    }
+}

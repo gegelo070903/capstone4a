@@ -182,7 +182,7 @@ $basePath = (basename(dirname($_SERVER['PHP_SELF'])) === 'capstone') ? '' : '../
             <a href="<?= $basePath ?>development/development_monitoring.php" class="<?= basename($_SERVER['PHP_SELF']) === 'development_monitoring.php' ? 'active' : '' ?>">
                 <i class="fa-solid fa-helmet-safety"></i> Development
             </a>
-            <a href="<?= $basePath ?>reports.php" class="<?= basename($_SERVER['PHP_SELF']) === 'reports.php' ? 'active' : '' ?>">
+            <a href="<?= $basePath ?>reports/reports.php" class="<?= basename($_SERVER['PHP_SELF']) === 'reports.php' ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-lines"></i> Reports
             </a>
             <a href="<?= $basePath ?>materials.php" class="<?= basename($_SERVER['PHP_SELF']) === 'materials.php' ? 'active' : '' ?>">
