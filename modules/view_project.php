@@ -92,7 +92,7 @@ include '../includes/header.php';
     <?php endif; ?>
   </div>
 
-  <!-- ✅ MATERIALS TAB WITH NEW DISPLAY BLOCK -->
+  <!-- ✅ MATERIALS TAB (UPDATED CONTENT) -->
   <div id="materials" class="tab-content">
     <div class="tab-header">
       <h3>Project Materials</h3>
@@ -108,85 +108,106 @@ include '../includes/header.php';
 
     <?php if ($materials->num_rows > 0): ?>
       <?php while ($m = $materials->fetch_assoc()): ?>
+        <!-- START NEW MATERIAL CARD -->
         <div class="material-card">
-          <div class="material-header">
-            <strong><?= htmlspecialchars($m['name']); ?></strong>
-            <div class="material-actions">
-              <a href="../materials/edit_material.php?id=<?= $m['id']; ?>&project_id=<?= $project_id; ?>" class="btn btn-edit">Edit</a>
-              <!-- Added the necessary onclick confirmation back -->
-              <a href="../materials/delete_material.php?id=<?= $m['id']; ?>&project_id=<?= $project_id; ?>" class="btn btn-delete" onclick="return confirm('Delete this material?');">Delete</a>
+          <div class="material-header-row">
+            <h4><?= htmlspecialchars($m['name']); ?></h4>
+            <div class="material-buttons">
+              <a href="../materials/edit_material.php?id=<?= $m['id']; ?>&project_id=<?= $project_id; ?>" class="btn-primary btn-sm">Edit</a>
+              <a href="../materials/delete_material.php?id=<?= $m['id']; ?>&project_id=<?= $project_id; ?>" class="btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this material?');">Delete</a>
             </div>
           </div>
 
           <div class="material-details">
-            <span><strong>Total:</strong> <?= intval($m['total_quantity']); ?> <?= htmlspecialchars($m['unit_of_measurement']); ?></span>
-            <span><strong>Remaining:</strong> <?= intval($m['remaining_quantity']); ?> <?= htmlspecialchars($m['unit_of_measurement']); ?></span>
+            <p><strong>Total:</strong> <?= intval($m['total_quantity']); ?> <?= htmlspecialchars($m['unit_of_measurement']); ?></p>
+            <p><strong>Remaining:</strong> <?= intval($m['remaining_quantity']); ?> <?= htmlspecialchars($m['unit_of_measurement']); ?></p>
           </div>
 
-          <div class="material-meta">
-            <!-- Wrapped optional fields in PHP checks -->
-            <?php if (!empty($m['supplier'])): ?>
-              <small><strong>Supplier:</strong> <?= htmlspecialchars($m['supplier']); ?></small>
-            <?php endif; ?>
-            <?php if (!empty($m['purpose'])): ?>
-              <small><strong>Purpose:</strong> <?= htmlspecialchars($m['purpose']); ?></small>
-            <?php endif; ?>
-            <small><strong>Date:</strong> <?= date('M d, Y', strtotime($m['created_at'])); ?></small>
+          <?php if (!empty($m['supplier']) || !empty($m['purpose'])): ?>
+            <div class="material-meta">
+              <?php if (!empty($m['supplier'])): ?>
+                <p><strong>Supplier:</strong> <?= htmlspecialchars($m['supplier']); ?></p>
+              <?php endif; ?>
+              <?php if (!empty($m['purpose'])): ?>
+                <p><strong>Purpose:</strong> <?= htmlspecialchars($m['purpose']); ?></p>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
+
+          <div class="material-date">
+            <small>Added on <?= date('M d, Y', strtotime($m['created_at'])); ?></small>
           </div>
         </div>
+        <!-- END NEW MATERIAL CARD -->
       <?php endwhile; ?>
     <?php else: ?>
       <p style="color:#888;">No materials recorded for this project yet.</p>
     <?php endif; ?>
   </div>
 
-  <!-- REPORTS TAB -->
+  <!-- 🎯 UPDATED REPORTS TAB (Grouped by Unit) -->
   <div id="reports" class="tab-content">
     <div class="tab-header">
       <h3>Project Reports</h3>
-      <div>
-        <a href="../reports/add_report.php?project_id=<?= $project_id; ?>" class="btn btn-primary" style="display:inline-block;">+ Add Report</a>
-        <!-- REMOVED: Generate Project PDF Button -->
-      </div>
+      <a href="../reports/add_report.php?project_id=<?= $project_id; ?>" class="btn btn-primary">+ Add Report</a>
     </div>
 
     <?php
-    $report_stmt = $conn->prepare("
-        SELECT id, report_date, progress_percentage, created_by, created_at 
-        FROM project_reports 
-        WHERE project_id = ? 
-        ORDER BY report_date DESC
-    ");
-    $report_stmt->bind_param('i', $project_id);
-    $report_stmt->execute();
-    $report_res = $report_stmt->get_result();
+    // Fetch all reports grouped by unit
+    $sql = "
+      SELECT pr.*, pu.name AS unit_name
+      FROM project_reports pr
+      LEFT JOIN project_units pu ON pr.unit_id = pu.id
+      WHERE pr.project_id = ?
+      ORDER BY pu.name ASC, pr.report_date DESC
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $project_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    $reports_by_unit = [];
+    while ($row = $res->fetch_assoc()) {
+        $unit_name = $row['unit_name'] ?: 'General / No Unit';
+        $reports_by_unit[$unit_name][] = $row;
+    }
+    $stmt->close();
     ?>
 
-    <!-- ✅ NEW REPORTS CARD-BASED LIST -->
-    <div class="report-section">
-      <?php if ($report_res->num_rows > 0): ?>
-        <?php while ($r = $report_res->fetch_assoc()): ?>
-          <div class="report-card">
-            <div class="report-info" onclick="window.location.href='../reports/view_report.php?id=<?= $r['id']; ?>'">
-              <h4 class="report-title"><?= date('m-d-Y', strtotime($r['report_date'])); ?></h4>
-              <p><strong>Progress:</strong> <?= intval($r['progress_percentage']); ?>%</p>
-              <p><strong>Created By:</strong> <?= htmlspecialchars($r['created_by']); ?></p>
-              <p><strong>Created At:</strong> <?= date('m-d-Y h:i A', strtotime($r['created_at'])); ?></p>
-            </div>
+    <?php if (empty($reports_by_unit)): ?>
+      <p style="color:#888;">No reports have been added for this project yet.</p>
+    <?php else: ?>
+      <!-- 💥 REPORTS TAB MODIFICATION START 💥 -->
+      <?php foreach ($reports_by_unit as $unit_name => $reports): ?>
+        <div class="unit-report-folder">
+          <h4 class="unit-folder-title"><?= htmlspecialchars($unit_name); ?></h4>
 
-            <div class="report-actions">
-              <a href="../reports/edit_report.php?id=<?= $r['id']; ?>" class="btn btn-edit" onclick="event.stopPropagation();">Edit</a>
-              <a href="../reports/delete_report.php?id=<?= $r['id']; ?>&project_id=<?= $project_id; ?>"
-                 class="btn btn-delete"
-                 onclick="event.stopPropagation(); return confirm('Are you sure you want to delete this report?');">Delete</a>
-            </div>
+          <div class="report-scroll-container">
+            <?php foreach ($reports as $r): ?>
+              <div class="report-card">
+                <div class="report-header">
+                  <strong><?= date('F d, Y', strtotime($r['report_date'])); ?></strong>
+                  <div class="report-actions">
+                    <a href="../reports/view_report.php?id=<?= $r['id']; ?>" class="btn-view">View</a>
+                    <a href="../reports/edit_report.php?id=<?= $r['id']; ?>" class="btn-edit">Edit</a>
+                    <a href="../reports/delete_report.php?id=<?= $r['id']; ?>&project_id=<?= $project_id; ?>"
+                       class="btn-delete"
+                       onclick="return confirm('Are you sure you want to delete this report?');">
+                       Delete
+                    </a>
+                  </div>
+                </div>
+
+                <p><strong>Progress:</strong> <?= (int)$r['progress_percentage']; ?>%</p>
+                <p><strong>Work Done:</strong> <?= htmlspecialchars($r['work_done']); ?></p>
+                <p><small><strong>Created by:</strong> <?= htmlspecialchars($r['created_by']); ?></small></p>
+              </div>
+            <?php endforeach; ?>
           </div>
-        <?php endwhile; ?>
-      <?php else: ?>
-        <p style="color:#777;">No reports found for this project yet. Add one using the button above.</p>
-      <?php endif; ?>
-    </div>
-    <!-- END NEW REPORTS CARD-BASED LIST -->
+        </div>
+      <?php endforeach; ?>
+      <!-- 💥 REPORTS TAB MODIFICATION END 💥 -->
+    <?php endif; ?>
   </div>
 </div>
 
@@ -388,7 +409,7 @@ include '../includes/header.php';
 .unit-progress { float: right; color: #2563eb; font-weight: bold; }
 .unit-actions { margin-top: 20px; }
 
-/* --- Step 1: Remove underline from all buttons --- */
+/* --- Button base styles (for unit/report cards) --- */
 .btn,
 .btn-primary,
 .btn-edit,
@@ -396,7 +417,7 @@ include '../includes/header.php';
 .btn-view,
 .btn-back {
   text-decoration: none !important;
-  color: inherit; /* keeps the color consistent */
+  color: inherit; 
 }
 .btn:hover,
 .btn-primary:hover,
@@ -420,7 +441,7 @@ include '../includes/header.php';
 .btn-edit {
   background: #2563eb !important;
   color: #fff !important;
-  padding: 4px 10px;
+  padding: 10px 15px;
   font-size: 13px;
   border-radius: 6px;
   font-weight: 600;
@@ -438,8 +459,96 @@ include '../includes/header.php';
   cursor: pointer;
 }
 
+
 /* ======================================= */
-/* ✅ REPLACED OVERLAY/FORM STYLES */
+/* ✅ NEW MATERIALS TAB STYLES */
+/* ======================================= */
+
+.material-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+.material-card:hover {
+  transform: translateY(-2px);
+}
+
+.material-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.material-header-row h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.material-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-primary.btn-sm,
+.btn-danger.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.btn-primary.btn-sm {
+  background-color: #2563eb;
+  color: #fff;
+}
+.btn-primary.btn-sm:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-danger.btn-sm {
+  background-color: #dc2626;
+  color: #fff;
+}
+.btn-danger.btn-sm:hover {
+  background-color: #b91c1c;
+}
+
+.material-details p,
+.material-meta p {
+  margin: 3px 0;
+  color: #374151;
+  font-size: 14px; /* Added font size for consistency */
+}
+
+.material-date small {
+  color: #6b7280;
+  font-size: 12px; /* Added font size for consistency */
+  display: block; /* Ensure it takes its own line */
+  margin-top: 10px;
+}
+
+/* Media query for smaller screens: stack header row */
+@media (max-width: 550px) {
+  .material-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+
+/* ======================================= */
+/* ✅ OVERLAY & FORM STYLES */
 /* ======================================= */
 
 /* ---------- Overlay Base ---------- */
@@ -624,171 +733,114 @@ select:focus {
 
 
 /* ======================================= */
-/* ✅ MATERIAL CARD STYLES (RETAINED) */
+/* 🎯 REPORTS TAB (GROUPED BY UNIT) STYLES */
 /* ======================================= */
 
-.material-card {
+.unit-report-folder {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 14px 14px;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.unit-folder-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
   margin-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+
+.report-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px;
+  /* Removed margin-bottom here as it's handled by .report-scroll-container gap */
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  max-width: 100%;
 }
-
-.material-card:hover {
+.report-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
 }
 
-.material-header {
+.report-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 6px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #1f2937;
 }
 
-.material-details {
-  display: flex;
-  gap: 20px;
-  font-size: 14px;
-  margin-bottom: 6px;
-  color: #374151;
-}
-
-.material-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #4b5563;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-.material-meta small {
-  padding-right: 15px; 
-}
-
-
-.material-actions {
+.report-actions {
   display: flex;
   gap: 6px;
 }
 
-.btn-edit {
-  background: #2563eb !important; /* Ensure blue */
-  color: #fff !important;
-}
-
+.btn-view,
+.btn-edit,
 .btn-delete {
-  background: #dc2626 !important; /* Ensure red */
-  color: #fff !important;
-}
-
-
-/* Media query for smaller screens: stack details and meta for readability */
-@media (max-width: 550px) {
-  .material-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .material-details {
-    flex-direction: column;
-    gap: 4px;
-  }
-  .material-meta {
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
-/* ====== Project Reports Layout (New) ====== */
-.report-section {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-top: 15px;
-}
-
-.report-card {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
-}
-
-.report-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-.report-info {
-  flex: 1;
-}
-
-.report-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 6px;
-}
-
-.report-info p {
-  margin: 2px 0;
-  color: #374151;
-  font-size: 14px;
-}
-
-/* ====== Buttons (Report Card Actions) ====== */
-.report-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.report-actions .btn {
-  display: inline-block;
-  padding: 6px 14px;
+  padding: 5px 10px;
+  font-size: 13px;
   border-radius: 6px;
-  text-decoration: none;
   font-weight: 600;
-  font-size: 14px;
-  transition: background 0.2s ease;
+  text-decoration: none;
   color: #fff;
 }
 
-.report-actions .btn-edit {
-  background: #2563eb;
+/* Overriding original button styles to use new report-specific ones */
+.report-actions .btn-view { background: #2563eb; }
+.report-actions .btn-edit { background: #6b7280; }
+.report-actions .btn-delete { background: #dc2626; }
+
+.report-actions .btn-view:hover { background: #1d4ed8; }
+.report-actions .btn-edit:hover { background: #4b5563; }
+.report-actions .btn-delete:hover { background: #b91c1c; }
+
+@media (max-width: 600px) {
+  .report-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .report-actions { flex-wrap: wrap; gap: 4px; }
+}
+/* END REPORTS TAB STYLES */
+
+/* 🎯 Scrollable Report Container */
+.report-scroll-container {
+  max-height: 350px;           /* control the visible height */
+  overflow-y: auto;            /* scroll only vertically */
+  padding-right: 8px;          /* space for scrollbar */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;                   /* space between report cards */
 }
 
-.report-actions .btn-edit:hover {
-  background: #1d4ed8;
+/* Optional — prettier scrollbars */
+.report-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+.report-scroll-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.report-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
-.report-actions .btn-delete {
-  background: #dc2626;
-}
+/* --- NOTE: Removed duplicate/old report styles from previous versions --- */
 
-.report-actions .btn-delete:hover {
-  background: #b91c1c;
-}
 </style>
 
 <script>
 function openTab(tabId) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+    // Ensure the tab button corresponding to the tabId is marked active
+    if (btn.getAttribute('onclick').includes(`'${tabId}'`)) {
+        btn.classList.add('active');
+    }
+  });
   document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-  document.querySelector(`button[onclick="openTab('${tabId}')"]`).classList.add('active');
   document.getElementById(tabId).classList.add('active');
 }
 
@@ -799,6 +851,13 @@ function toggleChecklistOverlay(show) {
 function toggleMaterialOverlay(show) {
   document.getElementById('materialOverlay').style.display = show ? 'flex' : 'none';
 }
+
+// FIX IMPLEMENTED: Read the 'tab' query parameter and open the correct tab
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab') || 'units';
+  openTab(tab);
+});
 </script>
 
 <?php include '../includes/footer.php'; ?>

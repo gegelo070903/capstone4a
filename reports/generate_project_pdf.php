@@ -1,188 +1,223 @@
 <?php
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../../vendor/autoload.php'; // Ensure DOMPDF is installed
+require_once __DIR__ . '/../vendor/autoload.php'; // Dompdf autoload
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
-if (!isset($_GET['project_id'])) {
-    die("Project ID is required.");
+// ✅ Validate parameters
+if (!isset($_GET['unit_id']) || !isset($_GET['project_id'])) {
+    die("<h3 style='color:red;'>Invalid parameters.</h3>");
 }
 
+$unit_id = (int)$_GET['unit_id'];
 $project_id = (int)$_GET['project_id'];
 
-// Fetch project info
-$ps = $conn->prepare("SELECT * FROM projects WHERE id = ?");
-$ps->bind_param('i', $project_id);
-$ps->execute();
-$project = $ps->get_result()->fetch_assoc();
+// ✅ Fetch project and unit details
+$project = $conn->query("SELECT name, location FROM projects WHERE id = $project_id LIMIT 1")->fetch_assoc();
+$unit = $conn->query("SELECT name, progress FROM project_units WHERE id = $unit_id LIMIT 1")->fetch_assoc();
 
-if (!$project) {
-    die("Invalid project ID.");
+if (!$project || !$unit) {
+    die("<h3 style='color:red;'>Project or unit not found.</h3>");
 }
 
-// Fetch all reports for this project
-$reports = [];
-$stmt = $conn->prepare("
-    SELECT * FROM project_reports 
-    WHERE project_id = ? 
-    ORDER BY report_date ASC
+// ✅ Fetch reports for this unit
+$reports = $conn->query("
+    SELECT report_date, progress_percentage, work_done, remarks, created_by, created_at
+    FROM project_reports
+    WHERE unit_id = $unit_id
+    ORDER BY report_date DESC
 ");
-$stmt->bind_param('i', $project_id);
-$stmt->execute();
-$res = $stmt->get_result();
-while ($r = $res->fetch_assoc()) $reports[] = $r;
 
-if (!$reports) {
-    die("No reports found for this project.");
-}
-
-// Initialize DOMPDF
+// ✅ Setup Dompdf
 $options = new Options();
+$options->set('isHtml5ParserEnabled', true);
 $options->set('isRemoteEnabled', true);
+$options->setChroot(__DIR__ . '/../');
+
 $dompdf = new Dompdf($options);
 
-// ✅ Adjust path to your logo (must exist)
-$logo_path = __DIR__ . '/../assets/images/logo.png';
-$logo_base64 = '';
-if (file_exists($logo_path)) {
-    $logo_data = file_get_contents($logo_path);
-    $logo_base64 = 'data:image/png;base64,' . base64_encode($logo_data);
+// ✅ Convert logo image to Base64 (guaranteed to show)
+$logoPath = realpath(__DIR__ . '/../assets/images/Sunshine_Sapphire_Construction_and_Supply_Logo.png');
+$logoBase64 = '';
+
+if ($logoPath && file_exists($logoPath)) {
+    $logoData = file_get_contents($logoPath);
+    $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
 }
 
-// ===============================
-// BUILD PDF HTML
-// ===============================
-$html = '
+// ✅ Start buffering
+ob_start();
+?>
+<!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
+<title><?= htmlspecialchars($unit['name']) ?> - Report</title>
 <style>
     @page {
-        margin: 120px 30px 50px 30px; /* top, right, bottom, left */
+        margin: 140px 50px 60px 50px;
     }
 
-    /* Fixed header on every page */
+    body {
+        font-family: DejaVu Sans, sans-serif;
+        color: #111827;
+        font-size: 12pt;
+    }
+
+    /* === HEADER === */
     header {
         position: fixed;
-        top: -100px;
+        top: -120px;
         left: 0;
         right: 0;
-        height: 80px;
-        text-align: center;
-        border-bottom: 2px solid #444;
-        padding-bottom: 5px;
+        height: 100px;
+        border-bottom: 2px solid #1e3a8a;
+        display: flex;
+        align-items: center;
+        padding: 0 30px;
     }
 
     header img {
-        position: absolute;
-        left: 20px;
-        top: 10px;
-        width: 80px;
+        width: 75px;
+        height: auto;
+        margin-right: 15px;
     }
 
-    header .company-title {
-        font-size: 16px;
+    .company-info h1 {
+        font-size: 18pt;
+        color: #1e3a8a;
+        margin: 0;
+    }
+
+    .company-info p {
+        margin: 2px 0;
+        font-size: 10pt;
+        color: #374151;
+    }
+
+    /* === FOOTER === */
+    footer {
+        position: fixed;
+        bottom: -40px;
+        left: 0;
+        right: 0;
+        height: 30px;
+        border-top: 1px solid #ddd;
+        text-align: right;
+        font-size: 10pt;
+        color: #6b7280;
+        padding-right: 10px;
+    }
+
+    /* === CONTENT === */
+    .unit-summary {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .unit-summary h2 {
+        font-size: 16pt;
+        color: #1e3a8a;
+        margin-bottom: 8px;
+    }
+
+    .unit-summary h3 {
+        margin: 0;
+        font-size: 13pt;
+    }
+
+    .unit-summary p {
+        margin: 3px 0;
+    }
+
+    hr {
+        border: none;
+        border-top: 1px solid #1e3a8a;
+        margin: 15px 0;
+    }
+
+    .report {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #f9fafb;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+    }
+
+    .report-date {
+        color: #1e3a8a;
         font-weight: bold;
-        text-transform: uppercase;
-        margin-top: 25px;
     }
 
-    body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
-    main { margin-top: 10px; }
-    h1, h2, h3, h4 { color: #222; margin-bottom: 8px; }
-    h1 { text-align: center; font-size: 20px; margin-top: 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #444; padding: 6px; }
-    th { background: #f2f2f2; }
-    .section { margin-top: 30px; page-break-inside: avoid; }
-    .images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .images img { width: 180px; height: 120px; object-fit: cover; border: 1px solid #aaa; border-radius: 4px; }
-    .page-break { page-break-after: always; }
+    .meta {
+        font-size: 11pt;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+
+    .pagenum:before {
+        content: counter(page);
+    }
 </style>
 </head>
 <body>
-
 <header>
-    ' . ($logo_base64 ? '<img src="' . $logo_base64 . '" alt="Logo">' : '') . '
-    <div class="company-title">Sunshine Sapphire Construction and Supply Co.</div>
+    <?php if ($logoBase64): ?>
+        <img src="<?= $logoBase64 ?>" alt="Company Logo">
+    <?php endif; ?>
+    <div class="company-info">
+        <h1>Sunshine Sapphire Construction and Supply</h1>
+        <p>Brgy. Estefania, Bacolod City, Negros Occidental</p>
+        <p>Email: sunshinebuilds@gmail.com | Tel: (034) 123-4567</p>
+    </div>
 </header>
 
+<footer>
+    Page <span class="pagenum"></span> | Generated on <?= date('F d, Y h:i A') ?>
+</footer>
+
 <main>
-<h1>Project Report Summary</h1>
-<h2>Project: ' . htmlspecialchars($project['name']) . '</h2>
-<p><strong>Location:</strong> ' . htmlspecialchars($project['location'] ?? 'N/A') . '<br>
-<strong>Total Reports:</strong> ' . count($reports) . '<br>
-<strong>Generated on:</strong> ' . date('m-d-Y h:i A') . '</p>
-<hr>
-';
+    <div class="unit-summary">
+        <h2>Unit Report</h2>
+        <h3><?= htmlspecialchars($project['name']) ?></h3>
+        <p>Location: <?= htmlspecialchars($project['location']) ?></p>
+        <p><strong>Unit:</strong> <?= htmlspecialchars($unit['name']) ?> |
+           <strong>Progress:</strong> <?= $unit['progress'] ?>%</p>
+    </div>
 
-// Loop through reports
-foreach ($reports as $index => $report) {
-    $html .= '<div class="section">';
-    $html .= '<h3>Report Date: ' . htmlspecialchars(date('m-d-Y', strtotime($report['report_date']))) . '</h3>';
-    $html .= '<p><strong>Progress:</strong> ' . htmlspecialchars($report['progress_percentage']) . '%</p>';
-    $html .= '<p><strong>Work Done:</strong><br>' . nl2br(htmlspecialchars($report['work_done'])) . '</p>';
-    $html .= '<p><strong>Remarks:</strong><br>' . nl2br(htmlspecialchars($report['remarks'] ?? '—')) . '</p>';
-    $html .= '<p><strong>Created by:</strong> ' . htmlspecialchars($report['created_by']) . '</p>';
-    $html .= '<p><strong>Created at:</strong> ' . htmlspecialchars(date('m-d-Y h:i A', strtotime($report['created_at']))) . '</p>';
+    <hr>
 
-    // Fetch materials used
-    $matStmt = $conn->prepare("
-        SELECT rm.quantity_used, m.name, m.unit_of_measurement 
-        FROM report_material_usage rm
-        JOIN materials m ON rm.material_id = m.id
-        WHERE rm.report_id = ?
-    ");
-    $matStmt->bind_param('i', $report['id']);
-    $matStmt->execute();
-    $matRes = $matStmt->get_result();
+    <?php if ($reports && $reports->num_rows > 0): ?>
+        <?php while ($r = $reports->fetch_assoc()): ?>
+            <div class="report">
+                <p class="report-date">📅 <?= date('F d, Y', strtotime($r['report_date'])) ?></p>
+                <p><strong>Progress:</strong> <?= $r['progress_percentage'] ?>%</p>
+                <p><strong>Work Done:</strong> <?= nl2br(htmlspecialchars($r['work_done'])) ?></p>
+                <?php if (!empty($r['remarks'])): ?>
+                    <p><strong>Remarks:</strong> <?= nl2br(htmlspecialchars($r['remarks'])) ?></p>
+                <?php endif; ?>
+                <p class="meta">
+                    Created by <?= htmlspecialchars($r['created_by']) ?> |
+                    <?= date('M d, Y h:i A', strtotime($r['created_at'])) ?>
+                </p>
+            </div>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <p><em>No reports available for this unit.</em></p>
+    <?php endif; ?>
+</main>
+</body>
+</html>
+<?php
+$html = ob_get_clean();
 
-    if ($matRes->num_rows > 0) {
-        $html .= '<h4>Materials Used</h4>';
-        $html .= '<table><tr><th>Material</th><th>Quantity Used</th></tr>';
-        while ($m = $matRes->fetch_assoc()) {
-            $html .= '<tr><td>' . htmlspecialchars($m['name']) . '</td>
-                      <td>' . htmlspecialchars($m['quantity_used']) . ' ' . htmlspecialchars($m['unit_of_measurement']) . '</td></tr>';
-        }
-        $html .= '</table>';
-    }
-
-    // Fetch proof images
-    $imgStmt = $conn->prepare("SELECT image_path FROM report_images WHERE report_id = ?");
-    $imgStmt->bind_param('i', $report['id']);
-    $imgStmt->execute();
-    $imgRes = $imgStmt->get_result();
-
-    if ($imgRes->num_rows > 0) {
-        $html .= '<h4>Proof Images</h4><div class="images">';
-        while ($img = $imgRes->fetch_assoc()) {
-            $imgPath = __DIR__ . '/report_images/' . $img['image_path'];
-            if (file_exists($imgPath)) {
-                $imgData = file_get_contents($imgPath);
-                $base64 = 'data:image/jpeg;base64,' . base64_encode($imgData);
-                $html .= '<img src="' . $base64 . '" alt="Proof">';
-            }
-        }
-        $html .= '</div>';
-    }
-
-    if ($index < count($reports) - 1) {
-        $html .= '<div class="page-break"></div>';
-    }
-
-    $html .= '</div>';
-}
-
-$html .= '</main></body></html>';
-
-// Render to PDF
+// ✅ Generate PDF
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
 
-// Output PDF
-$filename = 'Project_Report_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $project['name']) . '_' . date('Ymd_His') . '.pdf';
-$dompdf->stream($filename, ["Attachment" => false]);
-exit;
+$filename = 'Unit_Report_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $unit['name']) . '.pdf';
+$dompdf->stream($filename, ["Attachment" => 0]);
 ?>

@@ -1,4 +1,5 @@
 <?php
+// materials/delete_material.php
 require_once '../includes/db.php';
 require_once '../includes/functions.php';
 require_login();
@@ -15,7 +16,8 @@ $project_id = intval($_GET['project_id']);
 $stmt = $conn->prepare("DELETE FROM materials WHERE id = ?");
 $stmt->bind_param("i", $id);
 if ($stmt->execute()) {
-    header("Location: ../modules/view_project.php?id=$project_id");
+    // 🎯 UPDATED REDIRECT to include &tab=materials
+    header("Location: ../modules/view_project.php?id=$project_id&tab=materials");
     exit;
 } else {
     echo "<h3 style='color:red;'>Error deleting material. Please try again.</h3>";

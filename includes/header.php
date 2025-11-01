@@ -167,7 +167,7 @@ $basePath = (basename(dirname($_SERVER['PHP_SELF'])) === 'capstone') ? '' : '../
     <div class="sidebar-top">
         <!-- Logo links to Dashboard -->
         <a href="<?= $basePath ?>dashboard.php" class="logo-container">
-            <img src="<?= $basePath ?>assets/images/Sunshine Sapphire Construction and Supply Logo.png" alt="Sunshine Sapphire Logo">
+            <img src="<?= $basePath ?>assets/images/Sunshine_Sapphire_Construction_and_Supply_Logo.png" alt="Sunshine Sapphire Logo">
         </a>
         <div class="user-info"><?= htmlspecialchars($_SESSION['user_role'] ?? 'User') ?></div>
         <div class="sidebar-divider"></div>

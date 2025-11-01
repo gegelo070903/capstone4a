@@ -1,4 +1,5 @@
 <?php
+// materials/edit_material.php
 require_once '../includes/db.php';
 require_once '../includes/functions.php';
 require_login();
@@ -53,11 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $used_quantity = floatval($old['total_quantity']) - floatval($old['remaining_quantity']);
     if ($used_quantity < 0) $used_quantity = 0;
 
-    // Calculate new remaining (no decimals)
+    // Calculate new remaining
+    // Ensure the new remaining quantity doesn't go below zero
     $new_remaining_quantity = (int)($new_total_quantity - $used_quantity);
     if ($new_remaining_quantity < 0) $new_remaining_quantity = 0;
 
-    // Round total to whole numbers as well
+    // Round total to whole numbers for storage (matching previous logic)
     $new_total_quantity = (int)$new_total_quantity;
 
     // ==========================================================
@@ -65,18 +67,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ==========================================================
 
 
-    // ✅ Update material record (UPDATED TO NEW REQUESTED QUERY/BIND)
+    // ✅ Update material record
     $stmt = $conn->prepare("
         UPDATE materials 
         SET name = ?, supplier = ?, total_quantity = ?, remaining_quantity = ?, unit_of_measurement = ?, purpose = ?
         WHERE id = ? AND project_id = ?
     ");
-    // Ensure bind params match the query types (s:string, d:double, i:integer, etc.)
+    
     $final_total_quantity_db = $new_total_quantity;
     $final_remaining_quantity_db = $new_remaining_quantity;
 
+    // NOTE: Changed bind_param type 'd' to 'i' based on your calculation rounding to (int)
     $stmt->bind_param(
-        "ssdissii", // s:string, s:string, d:double, i:integer, s:string, s:string, i:integer, i:integer 
+        "ssiissii", // s:string, s:string, i:integer, i:integer, s:string, s:string, i:integer, i:integer 
         $name,
         $supplier,
         $final_total_quantity_db,
@@ -88,7 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     );
 
     if ($stmt->execute()) {
-        header("Location: ../modules/view_project.php?id=$project_id");
+        // 🎯 UPDATED REDIRECT to include &tab=materials
+        header("Location: ../modules/view_project.php?id=$project_id&tab=materials");
         exit;
     } else {
         echo "<h3 style='color:red;'>Error updating material: " . htmlspecialchars($stmt->error) . "</h3>";
@@ -255,7 +259,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="btn-group">
-                <button type="button" class="btn-cancel" onclick="window.location.href='../modules/view_project.php?id=<?= $project_id; ?>'">Cancel</button>
+                <!-- 🎯 UPDATED CANCEL BUTTON to include &tab=materials -->
+                <button type="button" class="btn-cancel" onclick="window.location.href='../modules/view_project.php?id=<?= $project_id; ?>&tab=materials'">Cancel</button>
                 <button type="submit" class="btn-primary">Update</button>
             </div>
         </form>

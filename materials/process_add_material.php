@@ -1,4 +1,5 @@
 <?php
+// materials/process_add_material.php
 require_once '../includes/db.php';
 require_once '../includes/functions.php';
 require_login();
@@ -14,12 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $purpose = isset($_POST['purpose']) ? trim($_POST['purpose']) : '';
     $date = date('Y-m-d H:i:s');
 
-    // ✅ Debugging: log missing values (for development use)
-    // echo "<pre>"; print_r($_POST); echo "</pre>"; exit;
-
     // ✅ Validate required fields
     if ($project_id <= 0 || empty($name) || $total_quantity <= 0 || empty($unit)) {
-        echo "<p style='color:red; font-family:Arial; margin:20px;'>Error: Missing or invalid required fields.</p>";
+        // Redirect with an error parameter if needed, or just display a simple message
+        echo "<p style='color:red; font-family:Arial; margin:20px;'>Error: Missing or invalid required fields. Please ensure Project ID is valid, Name is filled, Quantity is greater than 0, and Unit is filled.</p>";
         exit;
     }
 
@@ -39,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ✅ Bind parameters properly
+    // NOTE: 'd' for total_quantity and remaining_quantity as they are floatval() (doubles)
     $stmt->bind_param(
         "issddsss",
         $project_id,
@@ -53,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ✅ Execute insert
     if ($stmt->execute()) {
-        // Redirect back to project view after success
-        header("Location: ../modules/view_project.php?id=$project_id");
+        // UPDATED REDIRECT to include &tab=materials
+        header("Location: ../modules/view_project.php?id=$project_id&tab=materials");
         exit;
     } else {
         echo "<p style='color:red;'>Error adding material: " . htmlspecialchars($stmt->error) . "</p>";
