@@ -179,17 +179,18 @@ $basePath = (basename(dirname($_SERVER['PHP_SELF'])) === 'capstone') ? '' : '../
             <a href="<?= $basePath ?>uploads/projects.php" class="<?= basename($_SERVER['PHP_SELF']) === 'projects.php' ? 'active' : '' ?>">
                 <i class="fa-solid fa-folder-open"></i> Projects
             </a>
-            <a href="<?= $basePath ?>development/development_monitoring.php" class="<?= basename($_SERVER['PHP_SELF']) === 'development_monitoring.php' ? 'active' : '' ?>">
-                <i class="fa-solid fa-helmet-safety"></i> Development
+            <a href="<?= $basePath ?>materials/materials.php" class="<?= basename($_SERVER['PHP_SELF']) === 'materials.php' ? 'active' : '' ?>">
+                <i class="fa-solid fa-boxes-stacked"></i> Materials
             </a>
             <a href="<?= $basePath ?>reports/reports.php" class="<?= basename($_SERVER['PHP_SELF']) === 'reports.php' ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-lines"></i> Reports
             </a>
-            <a href="<?= $basePath ?>materials.php" class="<?= basename($_SERVER['PHP_SELF']) === 'materials.php' ? 'active' : '' ?>">
-                <i class="fa-solid fa-boxes-stacked"></i> Materials
+            <a href="<?= $basePath ?>auth/accounts.php" class="<?= basename($_SERVER['PHP_SELF']) === 'accounts.php' ? 'active' : '' ?>">
+                <i class="fa-solid fa-user-gear"></i> Accounts
             </a>
         </div>
     </div>
+    
 
     <div class="sidebar-bottom">
         <a href="<?= $basePath ?>auth/logout.php" class="logout-btn">

@@ -200,6 +200,35 @@ include '../includes/header.php';
 
                 <p><strong>Progress:</strong> <?= (int)$r['progress_percentage']; ?>%</p>
                 <p><strong>Work Done:</strong> <?= htmlspecialchars($r['work_done']); ?></p>
+                <!-- REMARKS are not displayed in this version, so I'll insert after Work Done -->
+                
+                <!-- ✅ Insert materials used display here (NEW) -->
+                <?php
+                // Fetch materials used for this report
+                $materials_used = get_materials_used_for_report($conn, (int)$r['id']);
+                if (!empty($materials_used)) {
+                    echo '<p style="margin-top:10px;"><strong>Materials Used:</strong></p>';
+                    // Using the table styles added below
+                    echo '<table>';
+                    echo '<thead><tr>
+                            <th>Material</th>
+                            <th style="text-align:center;">Quantity</th>
+                            <th style="text-align:center;">Unit</th>
+                          </tr></thead>';
+
+                    foreach ($materials_used as $m) {
+                        echo '<tr>
+                                <td>' . htmlspecialchars($m['material_name']) . '</td>
+                                <td style="text-align:center;">' . (int)$m['quantity_used'] . '</td>
+                                <td style="text-align:center;">' . htmlspecialchars($m['unit']) . '</td>
+                              </tr>';
+                    }
+
+                    echo '</table>';
+                }
+                ?>
+                <!-- END NEW MATERIALS DISPLAY -->
+
                 <p><small><strong>Created by:</strong> <?= htmlspecialchars($r['created_by']); ?></small></p>
               </div>
             <?php endforeach; ?>
@@ -827,7 +856,23 @@ select:focus {
   background: #94a3b8;
 }
 
-/* --- NOTE: Removed duplicate/old report styles from previous versions --- */
+/* --- NEW CSS for Materials Used Table (Instruction 3) --- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+.report-card th, .report-card td {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 13px;
+}
+.report-card th {
+  background: #f2f2f2;
+  font-weight: 600;
+}
+/* --- END New Table CSS --- */
 
 </style>
 

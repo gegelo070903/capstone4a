@@ -104,7 +104,7 @@ function filterProjects() {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  padding: 18px 24px;
+  padding:20px 24px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   margin-bottom: 25px;
 }

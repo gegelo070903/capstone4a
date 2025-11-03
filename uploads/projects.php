@@ -85,41 +85,98 @@ $projects = $stmt->get_result();
 ?>
 
 <style>
+/* --- Merged Styles from reports.php (with adjustments for projects.php) --- */
+
+/* === Variables (From old projects.php for button colors) === */
 :root {
   --brand-blue:#2563eb;
   --brand-blue-dark:#1d4ed8;
-  --gray-100:#f3f4f6;
-  --gray-200:#e5e7eb;
-  --ink:#111827;
-  --ok:#22c55e;
-  --warn:#fbbf24;
+  --ok:#16a34a; /* Adjusted from #22c55e to match reports.php style */
+  --warn:#f59e0b; /* Adjusted from #fbbf24 to match reports.php style */
   --danger:#dc2626;
+  --gray-100:#f8fafc; /* Matches reports.php background */
 }
-body {background:var(--gray-100);font-family:'Inter',sans-serif;color:var(--ink);}
-.main-container{padding:10px;}
-.projects-header-container{
-  background:#fff;border-radius:12px;padding:20px 24px;
-  box-shadow:0 4px 12px rgba(0,0,0,.08);
-  margin-bottom:22px;display:flex;justify-content:space-between;
-  align-items:center;flex-wrap:wrap;gap:10px;
+
+/* === Layout Wrapper === */
+.content-wrapper {
+  padding: 20px;
+  background: var(--gray-100);
+  font-family:'Inter',sans-serif; /* Added font */
+  color:#111827; /* Added text color */
 }
-h2{margin:0;font-size:26px;color:#111;}
-.btn-add,.btn-archive{background:var(--brand-blue);color:#fff;padding:10px 16px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;}
-.btn-add:hover,.btn-archive:hover{background:var(--brand-blue-dark);}
-.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:20px;}
-.project-card{
-  background:#fff;border:1px solid var(--gray-200);
-  border-radius:12px;padding:18px;box-shadow:0 2px 6px rgba(0,0,0,.08);
-  transition:transform .15s ease;cursor:pointer;
+
+/* === Header Container === */
+.header-container {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding:20px 24px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 25px;
 }
-.project-card:hover{transform:translateY(-2px);}
-.project-title{font-size:18px;font-weight:700;color:#000;}
-.status-badge{padding:4px 10px;border-radius:999px;font-size:12px;color:#fff;font-weight:700;}
-.status-badge.Pending{background:var(--warn);}
-.status-badge.Ongoing{background:var(--brand-blue);}
-.status-badge.Completed{background:var(--ok);}
+
+/* === Projects Header Row === */
+.projects-header { /* Renaming reports-header to projects-header for clarity */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.projects-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+/* === Controls (Search + Sort + Buttons) === */
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap; /* Added to handle button wrapping */
+}
+
+.controls input,
+.controls select { /* Combined search-bar input and sort-select */
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.controls input {
+    width: 230px;
+}
+.controls input:focus,
+.controls select:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+/* --- BUTTON STYLES (Kept from old projects.php but using new class names) --- */
+.btn-add, .btn-archive {
+    background: var(--brand-blue);
+    color: #fff;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+.btn-add:hover, .btn-archive:hover {
+    background: var(--brand-blue-dark);
+}
+
 .btn-primary,.btn-cancel,.btn-restore,.btn-delete{
   border:none;border-radius:8px;padding:8px 14px;font-weight:600;font-size:14px;cursor:pointer;margin-right:6px;
+  transition: background-color 0.2s;
 }
 .btn-primary{background:var(--brand-blue);color:#fff;}
 .btn-primary:hover{background:var(--brand-blue-dark);}
@@ -130,17 +187,74 @@ h2{margin:0;font-size:26px;color:#111;}
 .btn-delete{background:var(--danger);color:#fff;}
 .btn-delete:hover{background:#b91c1c;}
 
-/* ✅ Search + Sorting */
-.search-bar input{
-  padding:8px 12px;border:1px solid var(--gray-200);
-  border-radius:8px;outline:none;
-}
-.sort-select{
-  padding:8px 12px;border:1px solid var(--gray-200);
-  border-radius:8px;cursor:pointer;
+
+/* === Project Grid === */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 20px;
 }
 
-/* ✅ Overlay Styles */
+/* === Project Card === */
+.project-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.project-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--brand-blue);
+}
+
+/* === Project Header === */
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.project-header h3 { /* Using h3 for project title in card */
+  margin: 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+/* === Status Badge === */
+.status { /* Reusing reports.php status class */
+  padding: 4px 10px;
+  border-radius: 6px; /* Slightly adjusted from 999px */
+  font-size: 13px; /* Slightly adjusted from 12px */
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #fff;
+}
+/* Re-map status classes for projects.php statuses (e.g., Pending, Ongoing, Completed) */
+.status.pending { background-color: var(--warn); }
+.status.ongoing { background-color: var(--brand-blue); }
+.status.completed { background-color: var(--ok); }
+.status.archived { background-color: #6b7280; } /* Added for archived view */
+
+
+/* === Card Text === */
+.project-card p {
+  font-size: 14px;
+  color: #374151;
+  margin: 4px 0;
+}
+
+/* === No Data === */
+.no-data {
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* --- OVERLAY STYLES (Retained from old projects.php) --- */
 .overlay {
   position: fixed;inset: 0;background: rgba(0,0,0,0.6);
   display: none;align-items: center;justify-content: center;z-index: 9999;
@@ -155,36 +269,34 @@ h2{margin:0;font-size:26px;color:#111;}
 .form-grid {display:grid;grid-template-columns:1fr 1fr;gap:18px 22px;}
 .form-group {display:flex;flex-direction:column;gap:6px;}
 label {font-weight:600;color:#374151;font-size:14px;}
-input, select {
-  padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;background-color:#fff;
-  transition:border-color 0.2s, box-shadow 0.2s;
-}
-input:focus, select:focus {
-  outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.2);
-}
+/* Input/Select styling already handled in controls section */
 .overlay-actions {display:flex;justify-content:flex-end;gap:10px;margin-top:25px;}
 @keyframes zoomIn {from{opacity:0;transform:scale(0.95);}to{opacity:1;transform:scale(1);}}
 @media (max-width:640px){.form-grid{grid-template-columns:1fr;}}
+
 </style>
 
-<div class="main-container">
-  <div class="projects-header-container">
-    <h2><?= $showArchived ? "Archived Projects" : "Projects" ?></h2>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <?php if (!$showArchived): ?>
-        <div class="search-bar">
+<div class="content-wrapper">
+  
+  <!-- 🔍 Projects Header Container -->
+  <div class="header-container">
+    <div class="projects-header">
+      <h2><?= $showArchived ? "Archived Projects" : "Projects" ?></h2>
+
+      <div class="controls">
+        <?php if (!$showArchived): ?>
           <input type="text" id="searchInput" placeholder="Search project or location...">
-        </div>
-        <select id="sortSelect" class="sort-select">
-          <option value="latest">Sort: Latest</option>
-          <option value="oldest">Sort: Oldest</option>
-          <option value="name">Sort: Name A–Z</option>
-        </select>
-        <button class="btn-add" onclick="toggleOverlay(true)">+ Add Project</button>
-        <button class="btn-archive" onclick="window.location.href='projects.php?archived=1'">View Archived</button>
-      <?php else: ?>
-        <button class="btn-archive" onclick="window.location.href='projects.php'">Back to Active</button>
-      <?php endif; ?>
+          <select id="sortSelect" class="sort-select">
+            <option value="latest">Sort: Latest</option>
+            <option value="oldest">Sort: Oldest</option>
+            <option value="name">Sort: Name A–Z</option>
+          </select>
+          <button class="btn-add" onclick="toggleOverlay(true)">+ Add Project</button>
+          <button class="btn-archive" onclick="window.location.href='projects.php?archived=1'">View Archived</button>
+        <?php else: ?>
+          <button class="btn-archive" onclick="window.location.href='projects.php'">Back to Active</button>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
 
@@ -196,9 +308,12 @@ input:focus, select:focus {
              data-name="<?= strtolower($p['name']) ?>" 
              data-location="<?= strtolower($p['location']) ?>" 
              data-created="<?= strtotime($p['created_at']) ?>">
-          <div class="project-header" style="display:flex;justify-content:space-between;align-items:center;">
-            <div class="project-title"><?= htmlspecialchars($p['name']) ?></div>
-            <span class="status-badge <?= htmlspecialchars($p['status']) ?>"><?= htmlspecialchars($p['status']) ?></span>
+          
+          <div class="project-header">
+            <h3><?= htmlspecialchars($p['name']) ?></h3>
+            <span class="status <?= strtolower($p['status']) ?> <?= $showArchived ? 'archived' : '' ?>">
+              <?= htmlspecialchars($p['status']) ?>
+            </span>
           </div>
           <div class="project-details">
             <p><strong>Location:</strong> <?= htmlspecialchars($p['location']) ?></p>
@@ -220,7 +335,7 @@ input:focus, select:focus {
         </div>
       <?php endwhile; ?>
     <?php else: ?>
-      <p style="color:#666;">No <?= $showArchived ? 'archived' : 'active' ?> projects found.</p>
+      <p class="no-data">No <?= $showArchived ? 'archived' : 'active' ?> projects found.</p>
     <?php endif; ?>
   </div>
 </div>

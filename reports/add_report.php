@@ -1,6 +1,9 @@
 <?php
 ob_start(); // ✅ Start output buffering (prevents header warnings)
 
+// Set timezone immediately for consistent date handling
+date_default_timezone_set('Asia/Manila'); // set timezone to PH
+
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
@@ -92,13 +95,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Invalid session token. Please reload the page.';
     } else {
         
-        // Convert user input MM-DD-YYYY → YYYY-MM-DD for DB
+        // Convert user input MM-DD-YYYY → YYYY-MM-DD (for DB), fallback to today's PH date
+        // MODIFIED: Using the new unified date block
         if (!empty($_POST['report_date'])) {
             $date_in = str_replace('/', '-', $_POST['report_date']); // allow both / and -
             $timestamp = strtotime($date_in);
             $report_date = $timestamp ? date('Y-m-d', $timestamp) : date('Y-m-d');
         } else {
-            $report_date = date('Y-m-d');
+            $report_date = date('Y-m-d'); // fallback: today’s PH date
         }
 
         // 5) Get Progress from POST (Reverting to editable logic)
@@ -157,9 +161,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                // Deduct materials and record usage
+                // Deduct materials and record usage (MODIFIED: Using ON DUPLICATE KEY UPDATE)
                 if (!empty($material_ids) && is_array($material_ids)) {
-                    $insMU = $conn->prepare("INSERT INTO report_material_usage (report_id, material_id, quantity_used) VALUES (?, ?, ?)");
+                    // MODIFIED: Using ON DUPLICATE KEY UPDATE query
+                    $insMU = $conn->prepare("
+                      INSERT INTO report_material_usage (report_id, material_id, quantity_used)
+                      VALUES (?, ?, ?)
+                      ON DUPLICATE KEY UPDATE quantity_used = quantity_used + VALUES(quantity_used)
+                    ");
+                    if (!$insMU) throw new Exception('Material usage prepare failed: ' . $conn->error);
+                    
                     for ($i = 0; $i < count($material_ids); $i++) {
                         $mid = (int)$material_ids[$i];
                         $qty = (int)($quantities[$i] ?? 0);
@@ -171,12 +182,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $insMU->bind_param('iii', $report_id, $mid, $qty);
                         if (!$insMU->execute()) throw new Exception('Failed to record material usage.');
                     }
+                    $insMU->close();
                 }
                 
-                // IMPORTANT: Since progress is submitted by the user, you would likely want to 
-                // update the unit's progress here. This step is not explicitly requested,
-                // but a necessary consideration for a working system.
-                // update_unit_progress($conn, $unit_id, $progress_percentage); 
+                // ✅ NEW: Automatically update the unit's progress
+                [$ok, $msg] = update_unit_progress($conn, $unit_id, $progress_percentage);
+                if (!$ok) throw new Exception("Failed to update unit progress: $msg");
 
                 $conn->commit();
                 // ✅ REDIRECT IS CORRECT: Go back to the 'reports' tab
@@ -458,7 +469,7 @@ const addBtn = document.getElementById('add-material-row');
 function rowTemplate(idx) {
   let opts = mats.map(m => `
     <option value="${m.id}" data-rem="${m.remaining_quantity}" data-uom="${m.unit_of_measurement}">
-      ${m.name} (rem: ${m.remaining_quantity} ${m.unit_of_measurement})
+      ${m.name} (rem: ${Math.floor(m.remaining_quantity)} ${m.unit_of_measurement})
     </option>`).join('');
 
   return `

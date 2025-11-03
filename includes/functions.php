@@ -294,3 +294,48 @@ function deduct_material_quantity(mysqli $conn, int $materialId, int $qty): arra
         return [false, $e->getMessage()];
     }
 }
+
+// ✅ Update the progress percentage of a project unit (0–100)
+function update_unit_progress(mysqli $conn, int $unitId, int $progressPercentage): array {
+    try {
+        $progressPercentage = max(0, min(100, $progressPercentage)); // clamp
+
+        $stmt = $conn->prepare("UPDATE project_units SET progress = ? WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception('Prepare failed: ' . $conn->error);
+        }
+        $stmt->bind_param('ii', $progressPercentage, $unitId);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to update unit progress: ' . $stmt->error);
+        }
+        $stmt->close();
+
+        return [true, 'Progress updated'];
+    } catch (Exception $e) {
+        error_log("update_unit_progress error: " . $e->getMessage());
+        return [false, $e->getMessage()];
+    }
+}
+
+// ✅ Get all materials used for a specific report (for display/PDF)
+function get_materials_used_for_report(mysqli $conn, int $reportId): array {
+    $sql = "
+        SELECT 
+            m.name AS material_name,
+            m.unit_of_measurement AS unit,
+            rmu.quantity_used,
+            m.supplier
+        FROM report_material_usage rmu
+        INNER JOIN materials m ON rmu.material_id = m.id
+        WHERE rmu.report_id = ?
+        ORDER BY m.name ASC
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param('i', $reportId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $materials = $res->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    return $materials;
+}
