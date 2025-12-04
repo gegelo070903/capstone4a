@@ -39,10 +39,10 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
         <table class="data-table" id="usersTable">
           <thead>
             <tr>
-              <th style="width: 10%">#</th>
-              <th>Username</th>
-              <th>Role</th>
-              <th>Actions</th>
+              <th style="width: 5%">#</th>
+              <th style="width: 40%">Username</th>
+              <th style="width: 25%">Role</th>
+              <th style="width: 20%; text-align: right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -51,7 +51,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
               while ($row = $users->fetch_assoc()):
             ?>
               <tr data-id="<?= $row['id']; ?>">
-                <td><?= $row['id']; ?></td>
+                <td><?= htmlspecialchars($row['id']); ?></td>
                 <td><?= htmlspecialchars($row['username']); ?></td>
                 <td>
                   <span class="role-badge <?= get_role_class($row['role']); ?>">
@@ -60,10 +60,10 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
                 </td>
                 <td class="actions">
                   <button class="btn-icon btn-edit edit-btn" data-id="<?= $row['id']; ?>" title="Edit">
-                    <i class="fa-solid fa-pencil-square"></i>
+                    <i class="fas fa-edit"></i>
                   </button>
                   <button class="btn-icon btn-delete delete-btn" data-id="<?= $row['id']; ?>" title="Delete">
-                    <i class="fa-solid fa-trash"></i>
+                    <i class="fas fa-trash-alt"></i>
                   </button>
                 </td>
               </tr>
@@ -78,26 +78,27 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
 </div>
 
 <!-- ===================== ADD USER OVERLAY (Guaranteed Custom Overlay) ===================== -->
+<!-- REMOVED Bootstrap modal classes -->
 <div class="overlay" id="addUserModal" style="display: none;">
   <div class="overlay-card">
     
     <div class="overlay-header bg-primary">
       <h5 class="overlay-title"><i class="fa-solid fa-user-plus"></i> Add User</h5>
+      <!-- Changed to custom close button for custom overlay -->
       <button type="button" class="close-btn" onclick="toggleAddOverlay(false)">✕</button>
     </div>
     
     <div class="overlay-body">
       <form id="addUserForm">
-        <!-- Form Fields with adjusted margins/padding -->
-        <div class="form-group mb-4">
+        <div class="form-group">
           <label class="form-label">Username</label>
           <input type="text" class="form-control" name="username" required>
         </div>
-        <div class="form-group mb-4">
+        <div class="form-group">
           <label class="form-label">Password</label>
           <input type="password" class="form-control" name="password" required>
         </div>
-        <div class="form-group mb-4">
+        <div class="form-group">
           <label class="form-label">Role</label>
           <select name="role" class="form-select" required>
             <option value="admin">Admin</option>
@@ -114,28 +115,29 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
 </div>
 
 <!-- ===================== EDIT USER OVERLAY (Guaranteed Custom Overlay) ===================== -->
+<!-- REMOVED Bootstrap modal classes -->
 <div class="overlay" id="editUserModal" style="display: none;">
   <div class="overlay-card">
     
     <div class="overlay-header bg-warning">
       <h5 class="overlay-title"><i class="fa-solid fa-pencil-square"></i> Edit User</h5>
+      <!-- Changed to custom close button for custom overlay -->
       <button type="button" class="close-btn" onclick="toggleEditOverlay(false)">✕</button>
     </div>
     
     <div class="overlay-body">
       <form id="editUserForm">
         <input type="hidden" name="id" id="editUserId">
-        <div class="form-group mb-4">
+        <div class="form-group">
           <label class="form-label">Username</label>
           <input type="text" class="form-control" name="username" id="editUsername" required>
         </div>
-        <div class="form-group mb-4">
+        <div class="form-group">
           <label class="form-label">New Password</label>
           <input type="password" class="form-control" name="password" placeholder="Leave blank to keep current">
-          <!-- FIX: Helper text wrapped in small tag -->
           <small class="form-text-helper">Leave blank to keep current password.</small>
         </div>
-        <div class="form-group mb-4">
+        <div class="form-group">
           <label class="form-label">Role</label>
           <select name="role" id="editRole" class="form-select" required>
             <option value="admin">Admin</option>
@@ -155,25 +157,43 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
 <!-- Overlay Toast Notification -->
 <div id="overlay-toast" class="overlay-toast"></div>
 
+<!-- CRITICAL FIX: Bootstrap JS Bundle (must load before custom script) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-// =============== CUSTOM OVERLAY FUNCTIONS (DIRECT CONTROL) ===============
+// =============== CUSTOM OVERLAY FUNCTIONS (Final Custom Control) ===============
+// Using style.display = flex/none for reliable overlay management
 function toggleAddOverlay(show) {
-    document.getElementById('addUserModal').style.display = show ? 'flex' : 'none';
-    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
-    if (modalInstance) modalInstance.dispose();
+    const modalElement = document.getElementById('addUserModal');
+    modalElement.style.display = show ? 'flex' : 'none'; 
     if (show) document.getElementById('addUserForm').reset();
 }
 
 function toggleEditOverlay(show) {
-    document.getElementById('editUserModal').style.display = show ? 'flex' : 'none';
-    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
-    if (modalInstance) modalInstance.dispose();
-    if (show) document.getElementById('editUserForm').reset();
+    const modalElement = document.getElementById('editUserModal');
+    modalElement.style.display = show ? 'flex' : 'none';
+    if (show) document.getElementById('editUserForm').querySelector('input[name="password"]').value = '';
+    if (!show) document.getElementById('editUserForm').reset();
 }
 // =============== END CUSTOM OVERLAY FUNCTIONS ===============
 
 
 const processURL = "process_user.php";
+
+// Helper function to process the raw fetch response
+function processRawResponse(response) {
+    return response.text().then(text => {
+        if (!text) {
+            throw new Error('Empty response received from server.');
+        }
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error('Invalid JSON response: ' + text.substring(0, 50) + '...');
+        }
+    });
+}
+
 
 // =============== ADD USER ===============
 document.getElementById('addUserForm').addEventListener('submit', function(e) {
@@ -182,7 +202,7 @@ document.getElementById('addUserForm').addEventListener('submit', function(e) {
   formData.append('action', 'add');
 
   fetch(processURL, { method: 'POST', body: formData })
-    .then(r => r.json())
+    .then(processRawResponse) 
     .then(d => handleResponse(d, 'add'))
     .catch(err => showError(err));
 });
@@ -192,13 +212,14 @@ document.querySelectorAll('.edit-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const id = btn.dataset.id;
     fetch(`${processURL}?action=get&id=${id}`)
-      .then(r => r.json())
+      .then(processRawResponse) 
       .then(user => {
         document.getElementById('editUserId').value = user.id;
         document.getElementById('editUsername').value = user.username;
         document.getElementById('editRole').value = user.role;
         toggleEditOverlay(true); 
-      });
+      })
+      .catch(err => showError(err));
   });
 });
 
@@ -208,7 +229,7 @@ document.getElementById('editUserForm').addEventListener('submit', function(e) {
   const formData = new FormData(this);
   formData.append('action', 'edit');
   fetch(processURL, { method: 'POST', body: formData })
-    .then(r => r.json())
+    .then(processRawResponse) 
     .then(d => handleResponse(d, 'edit'))
     .catch(err => showError(err));
 });
@@ -222,30 +243,126 @@ document.querySelectorAll('.delete-btn').forEach(btn => {
       method: 'POST',
       body: new URLSearchParams({ action: 'delete', id })
     })
-      .then(r => r.json())
-      .then(d => handleResponse(d))
+      .then(processRawResponse) 
+      .then(d => handleResponse(d, 'delete'))
       .catch(err => showError(err));
   });
 });
 
-// =============== RESPONSE HANDLER (Uses Toast and custom overlay functions) ===============
+
+// =============== DYNAMIC DOM UPDATE HELPERS (FINAL) ===============
+
+function attachRowEvents(row) {
+  const editBtn = row.querySelector('.btn-edit');
+  const deleteBtn = row.querySelector('.btn-delete');
+  
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      const id = row.dataset.id;
+      fetch(`${processURL}?action=get&id=${id}`)
+        .then(processRawResponse) 
+        .then(user => {
+          document.getElementById('editUserId').value = user.id;
+          document.getElementById('editUsername').value = user.username;
+          document.getElementById('editRole').value = user.role;
+          toggleEditOverlay(true);
+        });
+    });
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+      const id = row.dataset.id;
+      if (!confirm('Are you sure you want to delete this user?')) return;
+      fetch(processURL, {
+        method: 'POST',
+        body: new URLSearchParams({ action: 'delete', id })
+      })
+        .then(processRawResponse) 
+        .then(d => handleResponse(d, 'delete'))
+        .catch(err => showError(err));
+    });
+  }
+}
+
+function addUserRow(user) {
+  const tbody = document.querySelector('#usersTable tbody');
+  const newRow = document.createElement('tr');
+  const roleDisplay = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+
+  newRow.setAttribute('data-id', user.id);
+  newRow.innerHTML = `
+    <td>${user.id}</td>
+    <td>${user.username}</td>
+    <td>
+      <span class="role-badge ${user.role === 'admin' ? 'role-admin' : 'role-constructor'}">
+        ${roleDisplay}
+      </span>
+    </td>
+    <td class="actions">
+      <button class="btn-icon btn-edit edit-btn" data-id="${user.id}" title="Edit">
+        <i class="fas fa-edit"></i>
+      </button>
+      <button class="btn-icon btn-delete delete-btn" data-id="${user.id}" title="Delete">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    </td>
+  `;
+  
+  // Find and remove "No users found" row if it exists
+  const emptyRow = tbody.querySelector('td.empty');
+  if (emptyRow) emptyRow.closest('tr').remove();
+
+  tbody.appendChild(newRow);
+  attachRowEvents(newRow); // CRITICAL: Attach events to the new buttons
+}
+
+function updateUserRow(user) {
+  const row = document.querySelector(`#usersTable tr[data-id="${user.id}"]`);
+  if (!row) return;
+  const roleDisplay = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+  
+  // Update username cell
+  row.querySelector('td:nth-child(2)').textContent = user.username;
+  
+  // Update role badge
+  const badge = row.querySelector('.role-badge');
+  badge.textContent = roleDisplay;
+  badge.className = `role-badge ${user.role === 'admin' ? 'role-admin' : 'role-constructor'}`;
+}
+
+function removeUserRow(id) {
+  const row = document.querySelector(`#usersTable tr[data-id="${id}"]`);
+  if (row) row.remove();
+  
+  // Optional: Check if table is now empty and add 'No users found' row
+  const tbody = document.querySelector('#usersTable tbody');
+  if (tbody.children.length === 0) {
+      const emptyRow = document.createElement('tr');
+      emptyRow.innerHTML = `<td colspan="4" class="empty">No users found.</td>`;
+      tbody.appendChild(emptyRow);
+  }
+}
+
+// =============== RESPONSE HANDLER (Updated for dynamic table update) ===============
 function handleResponse(data, actionIdentifier = null) {
+  // Hide overlay using the custom function
   if (actionIdentifier === 'add') toggleAddOverlay(false);
   if (actionIdentifier === 'edit') toggleEditOverlay(false);
 
+  // Show overlay message
   showOverlayToast(data.message, data.status === 'success' ? 'success' : 'danger');
 
-  if (data.status === 'success') setTimeout(() => location.reload(), 1500);
+  // DYNAMIC TABLE UPDATE LOGIC
+  if (data.status === 'success') {
+    if (data.action === 'add') addUserRow(data.user);
+    else if (data.action === 'edit') updateUserRow(data.user);
+    else if (data.action === 'delete') removeUserRow(data.user_id);
+    
+    // NOTE: location.reload() is removed
+  }
 }
 
-// =============== ERROR HANDLER ===============
-function showError(err) {
-  const alertHTML = `<div class="alert alert-danger" role="alert">Error: ${err.message}</div>`;
-  document.getElementById('alert-container').innerHTML = alertHTML;
-  console.error("❌", err);
-}
-
-// Helper function for Toast
 function showOverlayToast(message, type = 'success') {
   const toast = document.getElementById('overlay-toast');
   toast.textContent = message;
@@ -253,6 +370,13 @@ function showOverlayToast(message, type = 'success') {
   toast.className = `overlay-toast show ${type}`;
   setTimeout(() => toast.classList.remove('show'), 2500);
 }
+
+// Initial event attachment for existing rows (on DOM load)
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#usersTable tbody tr').forEach(row => {
+        attachRowEvents(row);
+    });
+});
 </script>
 
 <style>
@@ -270,7 +394,7 @@ function showOverlayToast(message, type = 'success') {
     --border-color: #d1d5db;
 }
 
-/* === CUSTOM OVERLAY STYLES (GUARANTEED OVERLAY) === */
+/* === CUSTOM OVERLAY STYLES (Final Custom Control) === */
 .overlay {
   position: fixed;
   inset: 0;
@@ -318,7 +442,11 @@ function showOverlayToast(message, type = 'success') {
     margin-right: 10px;
 }
 .overlay-body {
-    padding: 25px; /* Added general padding for the form content */
+    /* FIX: Set different vertical and horizontal padding: 
+       30px for top/bottom, 
+       40px for right, 
+       20px for left. */
+    padding: 30px 40px 30px 20px; 
 }
 
 .close-btn {
@@ -375,7 +503,122 @@ function showOverlayToast(message, type = 'success') {
     border: 1px solid var(--border-color);
 }
 
-/* ... (Table styles) ... */
+/* FIX: Table Spacing and Padding (Crowdedness Fix) */
+.data-table th, .data-table td {
+    padding: 15px 12px; /* Increased vertical padding for space */
+    border-bottom: 1px solid #ddd;
+    font-size: 14px;
+    text-align: left; /* Aligned left for content flow */
+}
+.data-table th {
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #4b5563;
+    text-align: left; /* Aligned left for header flow */
+}
+
+/* FIX: Column Alignment Overrides for centered data */
+.data-table th:nth-child(1), .data-table td:nth-child(1) { width: 5%; text-align: center; } /* # */
+.data-table th:nth-child(2), .data-table td:nth-child(2) { width: 40%; text-align: left; } /* Username (Left-aligned) */
+.data-table th:nth-child(3), .data-table td:nth-child(3) { width: 25%; text-align: center; } /* Role */
+.data-table th:nth-child(4) { 
+    width: 20%; 
+    /* The new block below overrides the action column styles */
+}
+
+
+/* === FIX: Perfect alignment for ACTIONS column === */
+.data-table th:last-child {
+  width: 140px;                 /* fixed column width */
+  text-align: center !important;
+  vertical-align: middle !important;
+  /* Reintroduce padding for border continuity, maintaining original 15px top/bottom */
+  padding: 15px 12px !important; 
+}
+
+.data-table td.actions {
+  width: 140px;                 /* fixed column width */
+  vertical-align: middle !important;
+  
+  /* Reintroduce padding for border continuity, maintaining original 15px top/bottom */
+  padding: 15px 12px !important;
+  
+  /* Now use flex to center the content inside the padded area */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;                    /* consistent spacing between buttons */
+}
+
+/* Uniform icon buttons */
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+/* Edit button styling */
+.btn-edit {
+  background-color: #f59e0b;
+  color: #fff;
+}
+.btn-edit:hover {
+  background-color: #d97706;
+}
+
+/* Delete button styling */
+.btn-delete {
+  background-color: #e74c3c;
+  color: #fff;
+}
+.btn-delete:hover {
+  background-color: #c0392b;
+}
+
+/* Optional: subtle lift on hover */
+.btn-icon:hover {
+  transform: scale(1.1);
+}
+
+
+/* FIX: Add New User Button Style */
+.btn-add {
+    background-color: var(--brand-blue);
+    color: var(--color-white);
+    padding: 10px 18px; /* Wider padding */
+    border-radius: 8px; /* Slightly more rounded */
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btn-add:hover {
+    background-color: var(--brand-blue-dark);
+}
+
+/* FIX: Role Badge */
+.role-badge {
+    background-color: #e5e7eb; /* Light Gray background for constructor/default */
+    color: #374151; /* Dark text for light background */
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap; /* Prevent badge text from wrapping */
+}
+.role-admin { background-color: var(--brand-blue); color: var(--color-white); } /* Blue background for Admin */
+
 
 /* === FORM LAYOUT & PADDING FIXES === */
 /* Adjust form group margin for more space */
@@ -383,12 +626,13 @@ function showOverlayToast(message, type = 'success') {
     margin-bottom: 1.5rem !important; /* Increased vertical space between fields */
 }
 
+/* FIX: Added display: block to label to force input onto new line */
 .form-group label {
     font-weight: 600;
     color: #374151;
     font-size: 14px;
     margin-bottom: 8px; /* Increased space between label and input */
-    display: block; /* Ensure label takes full width */
+    display: block; /* IMPORTANT FIX: Forces input to new line */
 }
 
 .form-control, .form-select {
@@ -398,13 +642,21 @@ function showOverlayToast(message, type = 'success') {
     font-size: 15px;
     background: #fff;
     transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%; /* IMPORTANT: Ensure input takes full width */
+}
+
+/* FIX 2: Limit the width of the role select dropdown */
+.form-group .form-select {
+    width: auto; /* Allow it to shrink based on content/max-width */
+    max-width: 250px; /* Set a max width */
+    display: block;
 }
 
 /* New style for small helper text */
 small.form-text-helper {
-    display: block; /* Force to next line */
+    display: block; 
     margin-top: 4px;
-    font-size: 13px; /* Smaller font */
+    font-size: 13px; 
     color: #6b7280;
     line-height: 1.3;
 }
@@ -415,7 +667,7 @@ small.form-text-helper {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    margin-top: 25px; /* Increased top margin */
+    margin-top: 25px; 
 }
 
 .btn-primary-modal, .btn-cancel-modal {

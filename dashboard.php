@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// dashboard.php — Updated version (uses units instead of constructor_id)
+// dashboard.php — Updated version with progress bars
 // ============================================================
 
 require_once __DIR__ . '/includes/db.php';
@@ -11,12 +11,26 @@ date_default_timezone_set('Asia/Manila');
 
 // --- Fetch summary counts ---
 $total_ongoing = $conn->query("SELECT COUNT(*) AS total FROM projects WHERE status = 'Ongoing'")->fetch_assoc()['total'];
-$total_completed = $conn->query("SELECT COUNT(*) AS total FROM projects WHERE status = 'Completed'")->fetch_assoc()['total'];
+$total_completed = $conn->query("SELECT COUNT(*) AS total FROM projects WHERE projects.status = 'Completed'")->fetch_assoc()['total'];
 $total_units = $conn->query("SELECT SUM(units) AS total FROM projects")->fetch_assoc()['total'] ?? 0;
 
-// --- Recent projects list ---
+// --- Recent projects list (REPLACED WITH NEW QUERY) ---
+// Automatically calculate progress based on the latest report in project_reports
 $query = "
-    SELECT p.id, p.name, p.location, p.units, p.status, p.created_at
+    SELECT 
+        p.id,
+        p.name,
+        p.location,
+        p.units,
+        p.status,
+        COALESCE((
+            SELECT r.progress_percentage
+            FROM project_reports r
+            WHERE r.project_id = p.id
+            ORDER BY r.report_date DESC, r.id DESC
+            LIMIT 1
+        ), 0) AS progress,
+        p.created_at
     FROM projects p
     ORDER BY p.id DESC
     LIMIT 5
@@ -49,9 +63,7 @@ require_once __DIR__ . '/includes/header.php';
     text-align: center;
     transition: transform 0.2s;
 }
-.stat-card:hover {
-    transform: translateY(-3px);
-}
+.stat-card:hover { transform: translateY(-3px); }
 .stat-card h3 {
     margin: 0;
     font-size: 20px;
@@ -64,6 +76,7 @@ require_once __DIR__ . '/includes/header.php';
     color: #111827;
 }
 
+/* ===== Table Section ===== */
 .table-card {
     background: #fff;
     border-radius: 12px;
@@ -71,11 +84,35 @@ require_once __DIR__ . '/includes/header.php';
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-.table-card h3 {
+/* ✅ NEW CSS: Recent Projects Header Row */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 15px;
-    font-size: 22px;
-    color: #111827;
 }
+
+.table-header h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.view-all-link {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+.view-all-link:hover {
+    color: #1e40af;
+    text-decoration: underline;
+}
+/* END NEW CSS */
+
+/* Removed old .table-card h3 style here as it is replaced by .table-header h3 */
 
 .table {
     width: 100%;
@@ -105,18 +142,32 @@ require_once __DIR__ . '/includes/header.php';
 .status-badge.Ongoing { background-color: #3b82f6; }
 .status-badge.Completed { background-color: #22c55e; }
 
-.view-all {
+/* ===== Progress Bar ===== */
+.progress-container {
+    margin-top: 8px;
+    width: 100%;
+    height: 8px;
+    background-color: #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.4s ease-in-out;
+}
+.progress-bar.Ongoing { background-color: #3b82f6; }
+.progress-bar.Pending { background-color: #fbbf24; }
+.progress-bar.Completed { background-color: #22c55e; }
+
+.progress-text {
+    font-size: 12px;
+    color: #6b7280;
     text-align: right;
-    margin-top: 10px;
+    margin-top: 4px;
 }
-.view-all a {
-    color: #2563eb;
-    text-decoration: none;
-    font-weight: 600;
-}
-.view-all a:hover {
-    text-decoration: underline;
-}
+
+/* REMOVED old .view-all block */
 </style>
 
 <div class="dashboard-container">
@@ -135,26 +186,52 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
+    <!-- ✅ REPLACED BLOCK START -->
     <div class="table-card">
-        <h3>Recent Projects</h3>
+        <div class="table-header">
+            <h3>Recent Projects</h3>
+            <a href="uploads/projects.php" class="view-all-link">View All Projects →</a>
+        </div>
         <table class="table">
             <thead>
                 <tr>
                     <th>Project Name</th>
                     <th>Location</th>
                     <th>Units</th>
-                    <th>Status</th>
+                    <th>Status & Progress</th>
                     <th>Start Date</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if ($projects->num_rows > 0): ?>
                     <?php while ($p = $projects->fetch_assoc()): ?>
+                        <?php 
+                            $progress = intval($p['progress'] ?? 0); 
+                            $status = $p['status'];
+                            // ⚙️ Optional Enhancement — Auto-Status Handling
+                            if ($progress >= 100) {
+                                $status = 'Completed';
+                            }
+                        ?>
                         <tr>
-                            <td><a href="modules/view_project.php?id=<?= $p['id'] ?>" style="color:#2563eb;text-decoration:none;font-weight:600;"><?= htmlspecialchars($p['name']) ?></a></td>
+                            <td>
+                                <a href="modules/view_project.php?id=<?= $p['id'] ?>"
+                                   style="color:#2563eb;text-decoration:none;font-weight:600;">
+                                   <?= htmlspecialchars($p['name']) ?>
+                                </a>
+                            </td>
                             <td><?= htmlspecialchars($p['location']) ?></td>
                             <td><?= htmlspecialchars($p['units']) ?></td>
-                            <td><span class="status-badge <?= htmlspecialchars($p['status']) ?>"><?= htmlspecialchars($p['status']) ?></span></td>
+                            <td>
+                                <span class="status-badge <?= htmlspecialchars($status) ?>">
+                                    <?= htmlspecialchars($status) ?>
+                                </span>
+                                <div class="progress-container">
+                                    <div class="progress-bar <?= htmlspecialchars($status) ?>"
+                                         style="width: <?= $progress ?>%;"></div>
+                                </div>
+                                <div class="progress-text"><?= $progress ?>%</div>
+                            </td>
                             <td><?= date('M d, Y', strtotime($p['created_at'])) ?></td>
                         </tr>
                     <?php endwhile; ?>
@@ -163,11 +240,20 @@ require_once __DIR__ . '/includes/header.php';
                 <?php endif; ?>
             </tbody>
         </table>
-        <div class="view-all">
-            <a href="uploads/projects.php">View All Projects →</a>
-        </div>
     </div>
+    <!-- ✅ REPLACED BLOCK END -->
 </div>
+
+<script>
+// Optional: Animate bars on load
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll('.progress-bar').forEach(bar => {
+    const width = bar.style.width;
+    bar.style.width = '0';
+    setTimeout(() => bar.style.width = width, 300);
+  });
+});
+</script>
 
 </div> <!-- closes main-content -->
 </body>

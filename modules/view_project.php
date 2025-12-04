@@ -184,9 +184,22 @@ include '../includes/header.php';
 
           <div class="report-scroll-container">
             <?php foreach ($reports as $r): ?>
+              <?php
+                // ✅ FIX: Defensive Date Check Logic
+                $db_date = $r['report_date'];
+                $display_date = 'Date Not Set'; // Default placeholder
+
+                if ($db_date && $db_date !== '0000-00-00') {
+                    $timestamp = strtotime($db_date);
+                    if ($timestamp !== false && $timestamp > 0) {
+                        $display_date = date('F d, Y', $timestamp);
+                    }
+                }
+              ?>
               <div class="report-card">
                 <div class="report-header">
-                  <strong><?= date('F d, Y', strtotime($r['report_date'])); ?></strong>
+                  <!-- ✅ FIX: Use the safely formatted date -->
+                  <strong><?= htmlspecialchars($display_date); ?></strong>
                   <div class="report-actions">
                     <a href="../reports/view_report.php?id=<?= $r['id']; ?>" class="btn-view">View</a>
                     <a href="../reports/edit_report.php?id=<?= $r['id']; ?>" class="btn-edit">Edit</a>

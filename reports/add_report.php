@@ -95,15 +95,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Invalid session token. Please reload the page.';
     } else {
         
-        // Convert user input MM-DD-YYYY → YYYY-MM-DD (for DB), fallback to today's PH date
-        // MODIFIED: Using the new unified date block
+        // ===============================================
+        // ✅ REPLACEMENT START: UNIFIED DATE LOGIC BLOCK (FIXED FOR MM-DD-YYYY)
+        // ===============================================
+        date_default_timezone_set('Asia/Manila');
+
         if (!empty($_POST['report_date'])) {
-            $date_in = str_replace('/', '-', $_POST['report_date']); // allow both / and -
-            $timestamp = strtotime($date_in);
-            $report_date = $timestamp ? date('Y-m-d', $timestamp) : date('Y-m-d');
+            $date_in = trim($_POST['report_date']);
+
+            // ✅ FIX: Use createFromFormat to explicitly parse as MM-DD-YYYY
+            $dt = DateTime::createFromFormat('m-d-Y', $date_in, new DateTimeZone('Asia/Manila'));
+            
+            // Check if parsing succeeded and the date is valid
+            if ($dt !== false && $dt->format('m-d-Y') === $date_in) {
+                $report_date = $dt->format('Y-m-d');
+            } else {
+                // Fallback: Use today's PH date if the input is malformed
+                $report_date = date('Y-m-d');
+            }
         } else {
-            $report_date = date('Y-m-d'); // fallback: today’s PH date
+            // Default when field is blank
+            $report_date = date('Y-m-d');
         }
+        // ===============================================
+        // ✅ REPLACEMENT END
+        // ===============================================
 
         // 5) Get Progress from POST (Reverting to editable logic)
         $progress_percentage = max(0, min(100, (int)($_POST['progress_percentage'] ?? 0)));
@@ -244,6 +260,7 @@ $report_date_value = htmlspecialchars($_POST['report_date'] ?? date('m-d-Y'));
         <!-- END NEW BLOCK -->
 
         <div class="form-group">
+          <!-- ✅ CHANGE: Added (MM-DD-YYYY) to the label -->
           <label for="report_date">Date (MM-DD-YYYY)</label>
           <input type="text" id="report_date" name="report_date" value="<?= $report_date_value; ?>" required>
         </div>

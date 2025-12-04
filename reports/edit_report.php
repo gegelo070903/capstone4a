@@ -30,6 +30,21 @@ if (!$report) {
 
 $project_id = $report['project_id'];
 
+// === NEW: SAFE DATE PRE-FILL FOR INPUT ===
+$report_date_value_for_input = date('m-d-Y'); // Default to today in case DB date is bad or new report
+
+if (isset($report['report_date']) && $report['report_date'] && $report['report_date'] !== '0000-00-00') {
+    // Format the valid DB date (Y-m-d) to the required input format (m-d-Y)
+    $report_date_value_for_input = date('m-d-Y', strtotime($report['report_date']));
+}
+
+// If form submission failed, prioritize the POSTed date value (if it exists)
+if (isset($_POST['report_date'])) {
+    $report_date_value_for_input = htmlspecialchars($_POST['report_date']);
+}
+// =========================================
+
+
 // ✅ Fetch related materials and images (MODIFIED: Using relational tables for materials)
 $materials_result = $conn->query("
     SELECT 
@@ -57,15 +72,31 @@ $images = $conn->query("SELECT * FROM report_images WHERE report_id = $report_id
 // ✅ Update report
 if (isset($_POST['update_report'])) {
   
-  // Convert user input MM-DD-YYYY → YYYY-MM-DD (for DB), fallback to today's PH date
-  // MODIFIED: Using the new unified date block
+  // ===============================================
+  // ✅ REPLACEMENT START: UNIFIED DATE LOGIC BLOCK (FIXED FOR MM-DD-YYYY)
+  // ===============================================
+  date_default_timezone_set('Asia/Manila');
+
   if (!empty($_POST['report_date'])) {
-      $date_in = str_replace('/', '-', $_POST['report_date']); // allow both / and -
-      $timestamp = strtotime($date_in);
-      $report_date = $timestamp ? date('Y-m-d', $timestamp) : date('Y-m-d');
+      $date_in = trim($_POST['report_date']);
+
+      // ✅ FIX: Use createFromFormat to explicitly parse as MM-DD-YYYY
+      $dt = DateTime::createFromFormat('m-d-Y', $date_in, new DateTimeZone('Asia/Manila'));
+      
+      // Check if parsing succeeded and the date is valid
+      if ($dt !== false && $dt->format('m-d-Y') === $date_in) {
+          $report_date = $dt->format('Y-m-d');
+      } else {
+          // Fallback: Use today's PH date if the input is malformed
+          $report_date = date('Y-m-d');
+      }
   } else {
-      $report_date = date('Y-m-d'); // fallback: today’s PH date
+      // Default when field is blank
+      $report_date = date('Y-m-d');
   }
+  // ===============================================
+  // ✅ REPLACEMENT END
+  // ===============================================
 
 
   $progress_percentage = $_POST['progress_percentage'];
@@ -81,14 +112,20 @@ if (isset($_POST['update_report'])) {
   $conn->begin_transaction();
   try {
 
+    // Final casting for binding
+    $progress_percentage_int = (int)$progress_percentage;
+
     // 1. Update project report
     $update_stmt = $conn->prepare("
       UPDATE project_reports 
       SET report_date=?, progress_percentage=?, work_done=?, remarks=?, updated_at=NOW() 
       WHERE id=?
     ");
-    // Ensure data types are correct: s (string), i (int), s (string), s (string), i (int)
-    $update_stmt->bind_param("isssi", $report_date, $progress_percentage, $work_done, $remarks, $report_id);
+    
+    // ✅ FIX: Corrected bind string to 'sisss' (5 characters for 5 question marks)
+    // Parameters: report_date (s), progress_percentage (i), work_done (s), remarks (s), report_id (i)
+    $update_stmt->bind_param("sisss", $report_date, $progress_percentage_int, $work_done, $remarks, $report_id);
+    
     if (!$update_stmt->execute()) throw new Exception('Failed to update report record: ' . $update_stmt->error);
     $update_stmt->close();
 
@@ -463,9 +500,10 @@ $unit_display = $unit_name ? "Unit: " . htmlspecialchars($unit_name) : 'General 
 
       <form method="POST" enctype="multipart/form-data">
         <div class="form-group">
-          <label>Date</label>
-          <!-- MODIFIED: Changed type to text and formatted date for MM-DD-YYYY display -->
-          <input type="text" name="report_date" value="<?= date('m-d-Y', strtotime($report['report_date'])); ?>" required>
+          <!-- ✅ CHANGE: Added (MM-DD-YYYY) to the label -->
+          <label>Date (MM-DD-YYYY)</label>
+          <!-- ✅ FIX: Use the new safe pre-fill variable -->
+          <input type="text" name="report_date" value="<?= htmlspecialchars($report_date_value_for_input); ?>" required>
         </div>
 
         <div class="form-group">
