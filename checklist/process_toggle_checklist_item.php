@@ -95,6 +95,31 @@ try {
     }
     $update_project_stmt->close();
 
+    // --- Update Project Status Based on Progress ---
+    // If progress drops below 100%, change status from "Completed" back to "Ongoing"
+    // If progress reaches 100%, change status to "Completed"
+    $status_stmt = $conn->prepare("SELECT status FROM projects WHERE id = ?");
+    $status_stmt->bind_param('i', $project_id);
+    $status_stmt->execute();
+    $current_status = $status_stmt->get_result()->fetch_assoc()['status'] ?? '';
+    $status_stmt->close();
+
+    if ($overall_progress >= 100 && $current_status !== 'Completed') {
+        // Progress hit 100% - mark as Completed
+        $new_status = 'Completed';
+        $update_status_stmt = $conn->prepare("UPDATE projects SET status = ? WHERE id = ?");
+        $update_status_stmt->bind_param('si', $new_status, $project_id);
+        $update_status_stmt->execute();
+        $update_status_stmt->close();
+    } elseif ($overall_progress < 100 && $current_status === 'Completed') {
+        // Progress dropped below 100% - revert to Ongoing
+        $new_status = 'Ongoing';
+        $update_status_stmt = $conn->prepare("UPDATE projects SET status = ? WHERE id = ?");
+        $update_status_stmt->bind_param('si', $new_status, $project_id);
+        $update_status_stmt->execute();
+        $update_status_stmt->close();
+    }
+
 
     // --- Commit and Redirect ---
     $conn->commit();

@@ -12,25 +12,24 @@ date_default_timezone_set('Asia/Manila');
 // --- Fetch summary counts ---
 $total_ongoing = $conn->query("SELECT COUNT(*) AS total FROM projects WHERE status = 'Ongoing'")->fetch_assoc()['total'];
 $total_completed = $conn->query("SELECT COUNT(*) AS total FROM projects WHERE projects.status = 'Completed'")->fetch_assoc()['total'];
-$total_units = $conn->query("SELECT SUM(units) AS total FROM projects")->fetch_assoc()['total'] ?? 0;
+// Count actual units from project_units table
+$total_units = $conn->query("SELECT COUNT(*) AS total FROM project_units")->fetch_assoc()['total'] ?? 0;
 
-// --- Recent projects list (REPLACED WITH NEW QUERY) ---
-// Automatically calculate progress based on the latest report in project_reports
+// --- Recent projects list ---
+// Calculate progress based on unit checklist completion and count actual units
 $query = "
     SELECT 
         p.id,
         p.name,
         p.location,
-        p.units,
         p.status,
+        p.created_at,
+        (SELECT COUNT(*) FROM project_units pu WHERE pu.project_id = p.id) AS unit_count,
         COALESCE((
-            SELECT r.progress_percentage
-            FROM project_reports r
-            WHERE r.project_id = p.id
-            ORDER BY r.report_date DESC, r.id DESC
-            LIMIT 1
-        ), 0) AS progress,
-        p.created_at
+            SELECT ROUND(AVG(pu.progress))
+            FROM project_units pu
+            WHERE pu.project_id = p.id
+        ), 0) AS progress
     FROM projects p
     ORDER BY p.id DESC
     LIMIT 5
@@ -221,7 +220,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </a>
                             </td>
                             <td><?= htmlspecialchars($p['location']) ?></td>
-                            <td><?= htmlspecialchars($p['units']) ?></td>
+                            <td><?= (int)$p['unit_count'] ?></td>
                             <td>
                                 <span class="status-badge <?= htmlspecialchars($status) ?>">
                                     <?= htmlspecialchars($status) ?>

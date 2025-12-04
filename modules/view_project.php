@@ -1,6 +1,22 @@
 <?php
+// modules/view_project.php
+
+// =======================================================================
+// ✅ ERROR CHECKER: FORCES DISPLAY OF ALL ERRORS AND WARNINGS
+// =======================================================================
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Start a global try block to catch fatal errors that aren't database related
+try {
+
+// =======================================================================
+// PHP START (CORE LOGIC)
+// =======================================================================
+
 require_once '../includes/db.php';
-require_once '../includes/functions.php';
+require_once '../includes/functions.php'; 
 require_login();
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
@@ -17,18 +33,152 @@ $stmt->close();
 
 if (!$project) die('<h3 style="color:red;">Project not found.</h3>');
 
-// Fetch project units
-$units_stmt = $conn->prepare("SELECT * FROM project_units WHERE project_id = ?");
+// Fetch project units WITH calculated progress from checklist items
+$units_stmt = $conn->prepare("
+    SELECT pu.id, pu.name, pu.progress,
+           (SELECT COUNT(*) FROM project_checklists pc WHERE pc.unit_id = pu.id) as total_items,
+           (SELECT COUNT(*) FROM project_checklists pc WHERE pc.unit_id = pu.id AND pc.is_completed = 1) as completed_items
+    FROM project_units pu 
+    WHERE pu.project_id = ?
+"); 
 $units_stmt->bind_param("i", $project_id);
 $units_stmt->execute();
 $units_result = $units_stmt->get_result();
-$units = $units_result->fetch_all(MYSQLI_ASSOC);
+$units = [];
+while ($row = $units_result->fetch_assoc()) {
+    // Calculate progress based on checklist completion
+    $total = (int)$row['total_items'];
+    $completed = (int)$row['completed_items'];
+    $row['calculated_progress'] = $total > 0 ? round(($completed / $total) * 100) : 0;
+    // Use calculated progress instead of stored progress
+    $row['progress'] = $row['calculated_progress'];
+    $units[] = $row;
+}
 $units_stmt->close();
 
 // Calculate overall progress
 $total_units = count($units);
 $total_progress = array_sum(array_column($units, 'progress'));
 $overall_progress = $total_units > 0 ? round($total_progress / $total_units) : 0;
+
+// =======================================================================
+// ✅ AUTOMATIC STATUS CHANGE LOGIC
+// =======================================================================
+
+if ($project['status'] !== 'Completed' && $overall_progress >= 100) {
+    // Progress reached 100% - mark as Completed
+    $update_stmt = $conn->prepare("UPDATE projects SET status = 'Completed' WHERE id = ?");
+    $update_stmt->bind_param("i", $project_id);
+    
+    if ($update_stmt->execute()) {
+        $project['status'] = 'Completed'; 
+        echo "<script>alert('🎉 Project automatically set to Completed! Overall progress reached 100%.');</script>";
+    }
+    $update_stmt->close();
+} elseif ($project['status'] === 'Completed' && $overall_progress < 100) {
+    // Progress dropped below 100% - revert to Ongoing
+    $update_stmt = $conn->prepare("UPDATE projects SET status = 'Ongoing' WHERE id = ?");
+    $update_stmt->bind_param("i", $project_id);
+    
+    if ($update_stmt->execute()) {
+        $project['status'] = 'Ongoing'; 
+    }
+    $update_stmt->close();
+}
+
+// Update the project progress in the database (for display in projects.php)
+if ($project['progress'] != $overall_progress) {
+    $progress_update_stmt = $conn->prepare("UPDATE projects SET progress = ? WHERE id = ?");
+    $progress_update_stmt->bind_param("ii", $overall_progress, $project_id);
+    $progress_update_stmt->execute();
+    $progress_update_stmt->close();
+    $project['progress'] = $overall_progress;
+}
+
+// =======================================================================
+// END NEW LOGIC
+// =======================================================================
+
+// =======================================================================
+// ✅ ROBUST PHP DATA FETCHING FOR EMBEDDED ADD REPORT FORM
+// =======================================================================
+
+// 1. Fetch materials for dropdown
+$mats = [];
+$ms = $conn->prepare("SELECT id, name, remaining_quantity, unit_of_measurement FROM materials WHERE project_id = ? ORDER BY name");
+
+if ($ms) {
+    $ms->bind_param('i', $project_id);
+    $ms->execute();
+    $matsRes = $ms->get_result();
+    while ($r = $matsRes->fetch_assoc()) {
+        $r['remaining_quantity'] = (int)$r['remaining_quantity'];
+        $mats[] = $r;
+    }
+    $ms->close();
+} else {
+    // This alert should disappear once the database is fixed.
+    echo "<script>alert('FATAL ERROR: Materials query preparation failed. Check your materials table and connection.');</script>";
+}
+
+
+// 2. Fetch COMPLETED checklist items with images for the "Work Done" dropdown
+// Now using the new checklist_images table for multiple images support
+$checklist_items = [];
+$sql_checklist = "
+    SELECT pc.id, pc.item_description, pc.unit_id, pu.name AS unit_name,
+           (SELECT COUNT(*) FROM checklist_images ci WHERE ci.checklist_id = pc.id) as image_count
+    FROM project_checklists pc
+    JOIN project_units pu ON pc.unit_id = pu.id
+    WHERE pc.project_id = ? AND pc.is_completed = 1
+    AND EXISTS (SELECT 1 FROM checklist_images ci WHERE ci.checklist_id = pc.id)
+    ORDER BY pu.name ASC, pc.item_description ASC
+";
+$check_stmt = $conn->prepare($sql_checklist);
+
+if ($check_stmt) {
+    $check_stmt->bind_param('i', $project_id);
+    $check_stmt->execute();
+    $check_result = $check_stmt->get_result();
+    while ($row = $check_result->fetch_assoc()) {
+        // Fetch all images for this checklist item
+        $img_stmt = $conn->prepare("SELECT id, image_path FROM checklist_images WHERE checklist_id = ?");
+        $img_stmt->bind_param('i', $row['id']);
+        $img_stmt->execute();
+        $img_result = $img_stmt->get_result();
+        $images = [];
+        while ($img = $img_result->fetch_assoc()) {
+            $images[] = $img['image_path'];
+        }
+        $img_stmt->close();
+        $row['images'] = $images;
+        $checklist_items[] = $row;
+    }
+    $check_stmt->close();
+} else {
+    echo "<script>alert('FATAL ERROR: Checklist query preparation failed.');</script>";
+}
+
+// 3. Determine initial form values (prefill)
+$selected_unit_id = (int)($_GET['unit_id'] ?? 0);
+$prefill_progress = 0;
+$report_date_value = date('m-d-Y');
+
+if ($selected_unit_id > 0) {
+    // Look up the progress for the pre-selected unit (if any) from the $units array
+    foreach ($units as $u) {
+        if ((int)$u['id'] === $selected_unit_id) {
+            $prefill_progress = (int)$u['progress'];
+            break;
+        }
+    }
+}
+
+$progress_value = $prefill_progress; 
+
+// =======================================================================
+// END EMBEDDED FORM DATA FETCHING
+// =======================================================================
 
 include '../includes/header.php';
 ?>
@@ -127,7 +277,7 @@ include '../includes/header.php';
             <div class="material-meta">
               <?php if (!empty($m['supplier'])): ?>
                 <p><strong>Supplier:</strong> <?= htmlspecialchars($m['supplier']); ?></p>
-              <?php endif; ?>
+              <?php endif; ?> 
               <?php if (!empty($m['purpose'])): ?>
                 <p><strong>Purpose:</strong> <?= htmlspecialchars($m['purpose']); ?></p>
               <?php endif; ?>
@@ -149,7 +299,8 @@ include '../includes/header.php';
   <div id="reports" class="tab-content">
     <div class="tab-header">
       <h3>Project Reports</h3>
-      <a href="../reports/add_report.php?project_id=<?= $project_id; ?>" class="btn btn-primary">+ Add Report</a>
+      <!-- ✅ MODIFIED: Button calls JS function to show embedded overlay -->
+      <button class="btn btn-primary" onclick="toggleReportOverlay(true)">+ Add Report</button>
     </div>
 
     <?php
@@ -172,6 +323,9 @@ include '../includes/header.php';
         $reports_by_unit[$unit_name][] = $row;
     }
     $stmt->close();
+    
+    // NOTE: The function get_materials_used_for_report($conn, $report_id) is 
+    // now correctly available globally via includes/functions.php
     ?>
 
     <?php if (empty($reports_by_unit)): ?>
@@ -213,15 +367,13 @@ include '../includes/header.php';
 
                 <p><strong>Progress:</strong> <?= (int)$r['progress_percentage']; ?>%</p>
                 <p><strong>Work Done:</strong> <?= htmlspecialchars($r['work_done']); ?></p>
-                <!-- REMARKS are not displayed in this version, so I'll insert after Work Done -->
                 
-                <!-- ✅ Insert materials used display here (NEW) -->
+                <!-- ✅ Materials Used Display -->
                 <?php
-                // Fetch materials used for this report
-                $materials_used = get_materials_used_for_report($conn, (int)$r['id']);
+                // Call the function from the included functions.php
+                $materials_used = get_materials_used_for_report($conn, (int)$r['id']); 
                 if (!empty($materials_used)) {
                     echo '<p style="margin-top:10px;"><strong>Materials Used:</strong></p>';
-                    // Using the table styles added below
                     echo '<table>';
                     echo '<thead><tr>
                             <th>Material</th>
@@ -338,6 +490,106 @@ include '../includes/header.php';
     </form>
   </div>
 </div>
+
+<!-- ======================================================= -->
+<!-- ✅ NEW: EMBEDDED ADD REPORT OVERLAY (HTML) -->
+<!-- ======================================================= -->
+<div class="overlay" id="addReportOverlay">
+  <div class="overlay-card" style="max-width: 700px;">
+    <button class="close-btn" onclick="toggleReportOverlay(false)">✕</button>
+    <h3 class="overlay-title">Add Report — Project: <?= htmlspecialchars($project['name']); ?></h3>
+
+    <!-- Error Box Placeholder -->
+    <div class="error-box" id="report-error-box" style="display:none;">
+        <ul id="report-error-list" style="margin:0 0 0 18px;"></ul>
+    </div>
+    
+    <!-- IMPORTANT: action points to the processing script and uses multipart/form-data -->
+    <form id="addReportForm" method="post" action="../reports/process_add_report.php" enctype="multipart/form-data">
+        <input type="hidden" name="project_id" value="<?= $project_id ?>">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+
+        <div class="form-grid">
+            <!-- 1. Unit Selection -->
+            <div class="form-group">
+              <label for="report_unit_id">Select Unit</label>
+              <select id="report_unit_id" name="unit_id" required>
+                <option value="">— Select Unit —</option>
+                <?php foreach ($units as $u): ?>
+                  <option value="<?= (int)$u['id'] ?>" data-progress="<?= (int)$u['progress'] ?>" <?= $selected_unit_id == (int)$u['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($u['name']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <!-- 2. Date -->
+            <div class="form-group">
+              <label for="report_date">Date (MM-DD-YYYY)</label>
+              <input type="text" id="report_date" name="report_date" value="<?= $report_date_value; ?>" required>
+            </div>
+            
+            <!-- 3. Progress -->
+            <div class="form-group">
+              <label for="progress_percentage">Progress (%)</label>
+              <input type="number" id="progress_percentage" name="progress_percentage"
+                     value="<?= $progress_value ?>" min="0" max="100" required
+                     style="background-color:#e5e7eb; cursor:not-allowed;" readonly>
+            </div>
+        </div>
+        
+        <div class="section-divider"></div>
+
+        <!-- 4. Work Done (Checklist Dropdown) -->
+        <div class="form-group">
+          <label for="work_done_checklist">Select Work Done (from Completed Checklist)</label>
+          <select id="work_done_checklist" name="work_done_checklist" required>
+            <option value="">— Select Completed Checklist Item —</option>
+            <?php foreach ($checklist_items as $item): 
+                $option_label = htmlspecialchars($item['unit_name'] . ' - ' . $item['item_description']);
+                $images_json = htmlspecialchars(json_encode($item['images'] ?? []));
+            ?>
+              <option value="<?= $item['id'] ?>" data-images="<?= $images_json ?>">
+                <?= $option_label ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <!-- Hidden field to hold the full work done description for the report table -->
+          <input type="hidden" name="work_done" id="work_done_hidden"> 
+        </div>
+
+        <!-- 5. Remarks (Textarea kept for additional notes) -->
+        <div class="form-group">
+          <label for="remarks">Remarks (Optional)</label>
+          <textarea id="remarks" name="remarks" rows="3"></textarea>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- 6. Materials Used -->
+        <h4>Materials Used</h4>
+        <div id="materials-rows"></div> 
+        <button type="button" class="btn-secondary" id="add-material-row">+ Add Material</button>
+
+        <div class="section-divider"></div>
+        
+        <!-- 7. Proof Images (Populated by JS from selected checklist item) -->
+        <h4>Proof Images (from Checklist)</h4>
+        <div id="proof-images-container">
+            <p id="image-placeholder" style="color:#6b7280;">Select a checklist item above to load its proof images.</p>
+        </div>
+        
+        <!-- Hidden input to hold image paths -->
+        <input type="hidden" name="proof_images_from_checklist" id="proof_images_from_checklist">
+
+
+        <div class="form-actions">
+          <button type="submit" name="save_report" class="btn-primary">Save Report</button>
+          <button type="button" class="btn-cancel" onclick="toggleReportOverlay(false)">Cancel</button>
+        </div>
+    </form>
+  </div>
+</div>
+<!-- END ADD REPORT OVERLAY -->
 
 <style>
 /* ====== BASE STYLES (UNCHANGED) ====== */
@@ -624,6 +876,8 @@ include '../includes/header.php';
   font-weight: 700;
   color: #111827;
   margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb; /* Added for the report modal header */
+  padding-bottom: 10px; /* Added for the report modal header */
 }
 
 /* ---------- Close Button ---------- */
@@ -885,8 +1139,68 @@ table {
   background: #f2f2f2;
   font-weight: 600;
 }
-/* --- END New Table CSS --- */
 
+/* === Embedded Form Specific Styles === */
+
+/* Error Box Style */
+.error-box {
+  background:#f8d7da; 
+  color:#721c24; 
+  padding:10px; 
+  border:1px solid #f5c6cb; 
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+/* Form Layouts */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0; 
+}
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Progress Range Slider Styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 10px;
+    background: #d1d5db;
+    border-radius: 5px;
+    outline: none;
+    margin-top: 10px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #2563eb;
+    cursor: pointer;
+}
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #111827;
+  font-weight: 600;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
 </style>
 
 <script>
@@ -910,12 +1224,204 @@ function toggleMaterialOverlay(show) {
   document.getElementById('materialOverlay').style.display = show ? 'flex' : 'none';
 }
 
+// ✅ NEW: Report Overlay Toggle
+function toggleReportOverlay(show) {
+    document.getElementById('addReportOverlay').style.display = show ? 'flex' : 'none';
+}
+
 // FIX IMPLEMENTED: Read the 'tab' query parameter and open the correct tab
 document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   const tab = params.get('tab') || 'units';
   openTab(tab);
+
+  // --- START NEW REPORT FORM SETUP (Embedded Logic) ---
+  const reportOverlayForm = document.getElementById('addReportForm');
+  if (reportOverlayForm) {
+      // ✅ NEW: PHP Variables encoded for JavaScript use
+      // NOTE: This JSON must be correct or the whole JS block fails.
+      const MATS_DATA = <?= json_encode($mats) ?>; 
+      const BASE_IMAGE_URL = '../uploads/checklist_proofs/';
+
+      const materialsRows = document.getElementById('materials-rows'); 
+      const addMatBtn = document.getElementById('add-material-row'); 
+      const workDoneSelect = document.getElementById('work_done_checklist');
+      const workDoneHidden = document.getElementById('work_done_hidden');
+      const imagesContainer = document.getElementById('proof-images-container');
+      const imagePathsInput = document.getElementById('proof_images_from_checklist');
+      const unitSelect = document.getElementById('report_unit_id');
+      const progInput = document.getElementById('progress_percentage');
+      const errorBox = document.getElementById('report-error-box');
+      const errorList = document.getElementById('report-error-list');
+
+      // Function to update progress based on Unit's progress (if selected)
+      function updateProgressFromUnit() {
+          const selectedUnit = unitSelect.options[unitSelect.selectedIndex];
+          console.log('Unit changed! Value:', selectedUnit.value, 'Text:', selectedUnit.textContent);
+          console.log('data-progress:', selectedUnit.getAttribute('data-progress'));
+          if (selectedUnit.value) {
+              const progress = selectedUnit.getAttribute('data-progress') || '0';
+              console.log('Setting progress to:', progress);
+              progInput.value = progress;
+          }
+      }
+      
+      // Use addEventListener for more reliable event binding
+      unitSelect.addEventListener('change', updateProgressFromUnit);
+      
+      // Call once on load for initial prefill (if a unit is pre-selected)
+      updateProgressFromUnit();
+
+      // === Work Done (Checklist) Logic ===
+      workDoneSelect.onchange = function() {
+          const selected = this.options[this.selectedIndex];
+          const itemDesc = selected.textContent.trim();
+          // Data is now retrieved from data-images attribute (JSON array)
+          let images = [];
+          try {
+              images = JSON.parse(selected.dataset.images || '[]');
+          } catch(e) {
+              images = [];
+          }
+          
+          // 1. Update the hidden field for DB storage
+          workDoneHidden.value = itemDesc; 
+
+          // 2. Update Proof Images Display (now supports multiple images)
+          imagesContainer.innerHTML = '';
+          imagePathsInput.value = '';
+
+          if (images.length > 0) {
+              let imagesHtml = '<div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:10px;">';
+              images.forEach((imgPath, index) => {
+                  const fullUrl = BASE_IMAGE_URL + encodeURIComponent(imgPath);
+                  imagesHtml += `
+                      <div style="border:1px solid #e5e7eb; border-radius:8px; padding:8px; display:flex; gap:8px; align-items:center; flex:1; min-width:200px;">
+                          <img src="${fullUrl}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
+                          <p style="margin:0; font-size:13px;">Proof ${index + 1}: ${itemDesc}</p>
+                      </div>
+                  `;
+              });
+              imagesHtml += '</div>';
+              imagesContainer.innerHTML = imagesHtml;
+              imagePathsInput.value = JSON.stringify(images); // Set all paths for PHP processing
+          } else {
+              imagesContainer.innerHTML = '<p id="image-placeholder" style="color:#6b7280;">No proof images found for this item.</p>';
+          }
+      }
+      
+      // === Materials Logic ===
+      function rowTemplate(idx) {
+        let opts = MATS_DATA.map(m => `
+          <option value="${m.id}" data-rem="${m.remaining_quantity}" data-uom="${m.unit_of_measurement}">
+            ${m.name} (rem: ${Math.floor(m.remaining_quantity)} ${m.unit_of_measurement})
+          </option>`).join('');
+
+        return `
+          <div class="mat-row" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+            <select name="material_id[]" class="mat-select" required style="flex:2;">
+              <option value="">Select material</option>
+              ${opts}
+            </select>
+            <input type="number" name="quantity_used[]" min="1" placeholder="Qty Used" required style="flex:1;">
+            <span class="unit-label" style="min-width:40px; color:#555;"></span>
+            <button type="button" class="remove-row btn-secondary" style="padding: 6px 10px;">Remove</button>
+          </div>`;
+      }
+
+      addMatBtn.addEventListener('click', () => {
+        materialsRows.insertAdjacentHTML('beforeend', rowTemplate(Date.now()));
+      });
+
+      materialsRows.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-row')) {
+          e.target.closest('.mat-row').remove();
+        }
+      });
+
+      materialsRows.addEventListener('change', (e) => {
+        if (e.target.classList.contains('mat-select')) {
+          const selected = e.target.options[e.target.selectedIndex];
+          const uom = selected.dataset.uom || '';
+          const unitLabel = e.target.closest('.mat-row').querySelector('.unit-label');
+          unitLabel.textContent = uom ? `(${uom})` : '';
+        }
+      });
+
+
+      // === Form Submission (AJAX) ===
+      reportOverlayForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Clear previous errors
+          errorBox.style.display = 'none';
+          errorList.innerHTML = '';
+
+          const formData = new FormData(this);
+          
+          // Client-side validation for Work Done selection
+          if (!workDoneSelect.value) {
+              errorList.innerHTML = '<li>Please select a Completed Checklist item for "Work Done."</li>';
+              errorBox.style.display = 'block';
+              return;
+          }
+          
+          // Client-side validation for progress
+          if (parseInt(progHidden.value) < 0 || parseInt(progHidden.value) > 100) {
+              errorList.innerHTML = '<li>Progress must be between 0 and 100%.</li>';
+              errorBox.style.display = 'block';
+              return;
+          }
+
+
+          fetch(this.action, { // Action points to ../reports/process_add_report.php
+              method: 'POST',
+              body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  alert('✅ Report added successfully!');
+                  toggleReportOverlay(false);
+                  window.location.reload(); // Reload parent page to update reports tab
+              } else {
+                  // Display server-side errors
+                  errorList.innerHTML = data.errors.map(err => `<li>${err}</li>`).join('');
+                  errorBox.style.display = 'block';
+              }
+          })
+          .catch(err => {
+              // Display generic network/parsing error (e.g., HTTP 500)
+              errorList.innerHTML = '<li>An unexpected network error occurred. Check server logs for HTTP 500 error.</li>';
+              errorBox.style.display = 'block';
+              console.error('AJAX Error:', err);
+          });
+      });
+
+  }
+  // --- END NEW REPORT FORM SETUP ---
+
+  // ... (Your existing persistent search/sort logic) ...
+
 });
 </script>
 
 <?php include '../includes/footer.php'; ?>
+<?php 
+// =======================================================================
+// PHP END (CATCH BLOCK)
+// =======================================================================
+
+// END THE GLOBAL TRY BLOCK
+} catch (Exception $e) {
+    // If a non-database fatal error occurred, display a cleaner message
+    echo '<div style="background:#f8d7da; color:#721c24; padding:20px; border:1px solid #f5c6cb; border-radius:8px; margin:50px auto; max-width:600px;">';
+    echo '<h2>Fatal Error Encountered</h2>';
+    echo '<p>There was an unhandled exception that stopped the page from loading.</p>';
+    echo '<p><strong>Message:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>';
+    echo '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . '</p>';
+    echo '<p><strong>Line:</strong> ' . htmlspecialchars($e->getLine()) . '</p>';
+    echo '</div>';
+    exit;
+}
+?>

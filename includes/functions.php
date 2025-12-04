@@ -197,13 +197,18 @@ function ensure_dir(string $path): void {
     }
 }
 
-// ✅ Clean file names (avoid special characters)
+// ✅ Clean file names (avoid special characters) - AGGRESSIVE VERSION
 function safe_filename(string $name): string {
-    // Replace sequences of non-alphanumeric, non-hyphen, non-underscore, non-dot characters with a single underscore
-    $name = preg_replace('/[^a-zA-Z0-9-_\.]/', '_', $name);
-    // Remove any leading/trailing dots or underscores
-    return trim($name, '._');
+    // 1. Replace all spaces/slashes/underscores with a hyphen
+    $name = preg_replace('/[\s\/\\\_]/', '-', $name);
+    // 2. Remove anything that isn't alphanumeric, a hyphen, or a dot (KEEP DOT FOR EXTENSION)
+    $name = preg_replace('/[^a-zA-Z0-9-.]/', '', $name);
+    // 3. Remove multiple hyphens
+    $name = preg_replace('/-+/', '-', $name);
+    // 4. Trim leading/trailing hyphens/dots
+    return trim($name, '-.');
 }
+
 
 // ✅ Save uploaded report images safely
 function save_report_image(array $file, string $destDir): array {
@@ -229,6 +234,7 @@ function save_report_image(array $file, string $destDir): array {
     }
 
     // Use finfo to check the actual MIME type (more secure than just file extension)
+    // NOTE: finfo is assumed to be working now after the server fix.
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mime  = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
@@ -313,6 +319,39 @@ function update_unit_progress(mysqli $conn, int $unitId, int $progressPercentage
         return [true, 'Progress updated'];
     } catch (Exception $e) {
         error_log("update_unit_progress error: " . $e->getMessage());
+        return [false, $e->getMessage()];
+    }
+}
+
+// ✅ Calculate and update unit progress based on completed checklist items
+function recalculate_unit_progress(mysqli $conn, int $unitId): array {
+    try {
+        // Count total and completed checklist items for this unit
+        $stmt = $conn->prepare("
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) as completed
+            FROM project_checklists 
+            WHERE unit_id = ?
+        ");
+        if (!$stmt) {
+            throw new Exception('Prepare failed: ' . $conn->error);
+        }
+        $stmt->bind_param('i', $unitId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        
+        $total = (int)($result['total'] ?? 0);
+        $completed = (int)($result['completed'] ?? 0);
+        
+        // Calculate percentage
+        $progress = $total > 0 ? round(($completed / $total) * 100) : 0;
+        
+        // Update the unit's progress
+        return update_unit_progress($conn, $unitId, $progress);
+    } catch (Exception $e) {
+        error_log("recalculate_unit_progress error: " . $e->getMessage());
         return [false, $e->getMessage()];
     }
 }

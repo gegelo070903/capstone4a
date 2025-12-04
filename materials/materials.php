@@ -49,7 +49,6 @@ $projects = $conn->query("SELECT id, name FROM projects ORDER BY name ASC"); // 
                         <th>Total Quantity</th>
                         <th>Remaining</th>
                         <th>Unit</th>
-                        <th>Purpose</th>
                         <th>Date Added</th>
                         <!-- REMOVED: Actions column header -->
                     </tr>
@@ -58,8 +57,8 @@ $projects = $conn->query("SELECT id, name FROM projects ORDER BY name ASC"); // 
                     <?php
                     if ($result && $result->num_rows > 0) {
                         $counter = 1;
-                        // Colspan reduced from 9 to 8 (removed Actions column)
-                        $colspan = 8; 
+                        // Colspan reduced (removed Actions and Purpose columns)
+                        $colspan = 7; 
                         
                         while ($row = $result->fetch_assoc()) {
                             // Convert to integers (remove decimals)
@@ -78,15 +77,14 @@ $projects = $conn->query("SELECT id, name FROM projects ORDER BY name ASC"); // 
                                 <td>{$total_qty}</td>
                                 <td>{$remaining_qty}</td>
                                 <td>{$row['unit_of_measurement']}</td>
-                                <td>{$row['purpose']}</td>
                                 <td>" . date('M d, Y', strtotime($row['created_at'])) . "</td>
                                 <!-- REMOVED: Actions column data -->
                             </tr>";
                             $counter++;
                         }
                     } else {
-                        // MODIFIED: colspan set to 8
-                        echo "<tr><td colspan='8' class='empty'>No materials found.</td></tr>";
+                        // MODIFIED: colspan set to 7
+                        echo "<tr><td colspan='7' class='empty'>No materials found.</td></tr>";
                     }
                     ?>
                 </tbody>
@@ -113,7 +111,7 @@ function applyFilters() {
     rows.forEach(row => {
         const rowText = row.textContent.toLowerCase();
         // The project name is now in cell index 2 
-        // # (0), Material (1), Project (2), Total Quantity (3), Remaining (4), Unit (5), Purpose (6), Date Added (7)
+        // # (0), Material (1), Project (2), Total Quantity (3), Remaining (4), Unit (5), Date Added (6)
         const projectCellText = row.cells[2].textContent.toLowerCase();
 
         const passesTextFilter = rowText.includes(textFilter);

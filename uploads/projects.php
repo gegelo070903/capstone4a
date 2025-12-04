@@ -11,15 +11,15 @@ require_login();
 $user_role = $_SESSION['user_role'] ?? 'constructor';
 date_default_timezone_set('Asia/Manila');
 
-// ✅ Add Project
+// ✅ Add Project - MODIFIED: Status is now automatically set to 'Pending'
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_project'])) {
     $project_name = trim($_POST['project_name']);
     $project_location = trim($_POST['project_location']);
     $units = intval($_POST['units']);
-    $status = trim($_POST['status']);
+    $status = 'Pending'; // ✅ AUTOMATED: Hardcode initial status to 'Pending'
 
-    if (empty($project_name) || empty($project_location) || $units <= 0 || empty($status)) {
-        echo "<script>alert('⚠️ Please fill in all required fields.');</script>";
+    if (empty($project_name) || empty($project_location) || $units <= 0) { // MODIFIED validation
+        echo "<script>alert('⚠️ Please fill in all required fields (Project Name, Location, Units).');</script>";
     } else {
         $stmt = $conn->prepare("INSERT INTO projects (name, location, units, status, created_at) VALUES (?, ?, ?, ?, NOW())");
         $stmt->bind_param("ssis", $project_name, $project_location, $units, $status);
@@ -36,21 +36,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_project'])) {
             }
             $unit_stmt->close();
 
-            echo "<script>alert('✅ Project added successfully!'); window.location.href='projects.php';</script>";
+            echo "<script>alert('✅ Project added successfully with status: Pending!'); window.location.href='projects.php';</script>";
         } else {
             echo "<script>alert('❌ Error adding project: " . addslashes($stmt->error) . "');</script>";
         }
     }
 }
 
+// ✅ NEW: Confirm Project (Pending -> Ongoing)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_project'])) {
+    $id = intval($_POST['project_id']);
+    // Only update if current status is 'Pending'
+    $stmt = $conn->prepare("UPDATE projects SET status = 'Ongoing' WHERE id = ? AND status = 'Pending'");
+    $stmt->bind_param("i", $id);
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        echo "<script>alert('✅ Project confirmed and status set to Ongoing!'); window.location.href='projects.php';</script>";
+    } else {
+        echo "<script>alert('❌ Error confirming project or status was not Pending.'); window.location.href='projects.php';</script>";
+    }
+    $stmt->close();
+    exit;
+}
+
+// ✅ NEW: Cancel Project (Pending -> Cancelled/Archive)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_project'])) {
+    $id = intval($_POST['project_id']);
+    // Archive the project AND set status to 'Cancelled'
+    $stmt = $conn->prepare("UPDATE projects SET is_deleted = 1, deleted_at = NOW(), status = 'Cancelled' WHERE id = ? AND status = 'Pending'");
+    $stmt->bind_param("i", $id);
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        echo "<script>alert('✅ Project cancelled and moved to Archive.'); window.location.href='projects.php';</script>";
+    } else {
+        echo "<script>alert('❌ Error cancelling project or status was not Pending.'); window.location.href='projects.php';</script>";
+    }
+    $stmt->close();
+    exit;
+}
+
 // ✅ Restore Project
 if (isset($_GET['restore'])) {
     $id = intval($_GET['restore']);
-    $stmt = $conn->prepare("UPDATE projects SET is_deleted = 0, deleted_at = NULL WHERE id = ?");
+    // When restoring, set a default non-archived status, e.g., 'Ongoing' (adjust if needed)
+    $stmt = $conn->prepare("UPDATE projects SET is_deleted = 0, deleted_at = NULL, status = 'Ongoing' WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $stmt->close();
-    echo "<script>alert('✅ Project restored successfully!'); window.location.href='projects.php?archived=1';</script>";
+    echo "<script>alert('✅ Project restored successfully with status: Ongoing!'); window.location.href='projects.php';</script>";
     exit;
 }
 
@@ -85,7 +116,10 @@ $projects = $stmt->get_result();
 ?>
 
 <style>
-/* --- Merged Styles from reports.php (with adjustments for projects.php) --- */
+/* --- STYLING REMAINS UNCHANGED AS REQUESTED --- */
+/* You may want to add a .status.cancelled style here if the status changes to 'Cancelled' */
+.status.cancelled { background-color: #ef4444; } /* Optional: Added for 'Cancelled' status */
+
 
 /* === Variables (From old projects.php for button colors) === */
 :root {
@@ -237,7 +271,7 @@ $projects = $stmt->get_result();
 .status.pending { background-color: var(--warn); }
 .status.ongoing { background-color: var(--brand-blue); }
 .status.completed { background-color: var(--ok); }
-.status.archived { background-color: #6b7280; } /* Added for archived view */
+.status.archived, .status.cancelled { background-color: #6b7280; } /* Added for archived/cancelled view */
 
 
 /* === Card Text === */
@@ -323,10 +357,19 @@ label {font-weight:600;color:#374151;font-size:14px;}
 
           <?php if ($user_role === 'admin'): ?>
           <div style="margin-top:10px;" onclick="event.stopPropagation();">
-            <?php if (!$showArchived): ?>
-              <button onclick="openEditModal(<?= $p['id'] ?>)" class="btn-primary">Edit</button>
-              <a href="../modules/delete_project.php?id=<?= $p['id'] ?>" onclick="return confirm('Archive this project?')" class="btn-cancel">Archive</a>
-            <?php else: ?>
+            <?php if (!$showArchived): // Active Projects View ?>
+              
+              <?php if ($p['status'] === 'Pending'): // ✅ NEW LOGIC: Confirm/Cancel/Edit for Pending status ?>
+                <button onclick="confirmStatusChange(<?= $p['id'] ?>, 'confirm')" class="btn-primary">Confirm</button>
+                <button onclick="confirmStatusChange(<?= $p['id'] ?>, 'cancel')" class="btn-cancel">Cancel</button>
+                <button onclick="openEditModal(<?= $p['id'] ?>)" class="btn-primary">Edit</button>
+
+              <?php else: // Original Logic for Ongoing/Completed ?>
+                <button onclick="openEditModal(<?= $p['id'] ?>)" class="btn-primary">Edit</button>
+                <a href="../modules/delete_project.php?id=<?= $p['id'] ?>" onclick="return confirm('Archive this project?')" class="btn-cancel">Archive</a>
+              <?php endif; ?>
+
+            <?php else: // Archived Projects View ?>
               <a href="projects.php?restore=<?= $p['id'] ?>" class="btn-restore" onclick="return confirm('Restore this project?')">Restore</a>
               <a href="projects.php?delete_perm=<?= $p['id'] ?>" class="btn-delete" onclick="return confirm('⚠️ Permanently delete this project?')">Delete</a>
             <?php endif; ?>
@@ -340,7 +383,7 @@ label {font-weight:600;color:#374151;font-size:14px;}
   </div>
 </div>
 
-<!-- ✅ ADD PROJECT OVERLAY -->
+<!-- ✅ ADD PROJECT OVERLAY - MODIFIED: Removed Status dropdown -->
 <div class="overlay" id="addOverlay">
   <div class="overlay-card">
     <button class="close-btn" onclick="toggleOverlay(false)">✕</button>
@@ -350,14 +393,7 @@ label {font-weight:600;color:#374151;font-size:14px;}
         <div class="form-group"><label>Project Name</label><input type="text" name="project_name" required></div>
         <div class="form-group"><label>Location</label><input type="text" name="project_location" required></div>
         <div class="form-group"><label>Units</label><input type="number" name="units" min="1" required></div>
-        <div class="form-group">
-          <label>Status</label>
-          <select name="status" required>
-            <option value="Pending">Pending</option>
-            <option value="Ongoing">Ongoing</option>
-            <option value="Completed">Completed</option>
-          </select>
-        </div>
+        <!-- Status field REMOVED: Status is now automatically set to 'Pending' in PHP -->
       </div>
       <div class="overlay-actions">
         <button type="button" class="btn-cancel" onclick="toggleOverlay(false)">Cancel</button>
@@ -384,6 +420,7 @@ label {font-weight:600;color:#374151;font-size:14px;}
             <option value="Pending">Pending</option>
             <option value="Ongoing">Ongoing</option>
             <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option> <!-- Added Cancelled for completeness -->
           </select>
         </div>
       </div>
@@ -398,6 +435,35 @@ label {font-weight:600;color:#374151;font-size:14px;}
 <script>
 function toggleOverlay(show){document.getElementById('addOverlay').style.display=show?'flex':'none';}
 function toggleEditOverlay(show){document.getElementById('editOverlay').style.display=show?'flex':'none';}
+
+// ✅ NEW: Status change confirmation function
+function confirmStatusChange(id, action) {
+    let message = (action === 'confirm') 
+        ? 'Are you sure you want to CONFIRM this project? Its status will change to Ongoing.' 
+        : 'Are you sure you want to CANCEL this project? It will be moved to Archive.';
+
+    if (confirm(message)) {
+        // Create a hidden form to submit the request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'projects.php'; 
+
+        const idInput = document.createElement('input');
+        idInput.type = 'hidden';
+        idInput.name = 'project_id';
+        idInput.value = id;
+        form.appendChild(idInput);
+
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = (action === 'confirm') ? 'confirm_project' : 'cancel_project';
+        actionInput.value = '1'; // A value to trigger the PHP POST logic
+        form.appendChild(actionInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
 
 // ✅ Fetch project data for edit
 function openEditModal(id){
