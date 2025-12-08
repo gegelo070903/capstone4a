@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 12, 2025 at 11:38 PM
+-- Generation Time: Dec 08, 2025 at 03:53 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.4.3
 
@@ -20,6 +20,29 @@ SET time_zone = "+00:00";
 --
 -- Database: `trial`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `checklist_images`
+--
+
+CREATE TABLE `checklist_images` (
+  `id` int(11) NOT NULL,
+  `checklist_id` int(11) NOT NULL,
+  `image_path` varchar(500) NOT NULL,
+  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `checklist_images`
+--
+
+INSERT INTO `checklist_images` (`id`, `checklist_id`, `image_path`, `uploaded_at`) VALUES
+(1, 30, '20251204_145932_da80703e_Generated_Image_October_18__2025_-_10_35AM__1.png', '2025-12-04 17:16:59'),
+(2, 44, '20251204_170803_6aa334ba_3.png', '2025-12-04 17:16:59'),
+(3, 46, '20251204_170737_3506bc95_2.png', '2025-12-04 17:16:59'),
+(5, 30, '20251204_172508_4b29ef43_348382973-184258404606301-5215474456440148018-n.png', '2025-12-04 17:25:08');
 
 -- --------------------------------------------------------
 
@@ -93,7 +116,8 @@ INSERT INTO `materials` (`id`, `project_id`, `name`, `supplier`, `total_quantity
 (4, 11, 'Gravel', '', 45.00, 41.00, 'sacks', '', '2025-11-03 14:38:51'),
 (6, 10, 'Cement', 'Rj4 Construction Supplies', 54.00, 54.00, 'sacks', '', '2025-10-31 06:53:09'),
 (8, 11, 'Hollow Blocks', '', 1000.00, 1000.00, 'pcs', '', '2025-10-31 18:30:13'),
-(10, 11, 'Cement', '', 45.00, 42.00, 'sacks', '', '2025-11-03 14:38:08');
+(10, 11, 'Cement', '', 45.00, 42.00, 'sacks', '', '2025-11-03 14:38:08'),
+(12, 11, 'tiles', 'JEFF BUILDERS', 100.00, 75.00, 'pcs', '', '2025-12-04 10:11:54');
 
 -- --------------------------------------------------------
 
@@ -120,11 +144,11 @@ CREATE TABLE `projects` (
 
 INSERT INTO `projects` (`id`, `name`, `location`, `units`, `progress`, `status`, `is_deleted`, `deleted_at`, `created_at`, `folder_path`) VALUES
 (2, 'Lumina Homes Renovation', 'Mandalagan', 1, 0, 'Pending', 0, NULL, '2025-08-21 01:45:49', NULL),
-(5, 'Deca Homes', 'Bacolod City', 0, 0, 'Pending', 1, '2025-10-29 17:06:50', '2025-09-08 11:09:13', NULL),
+(5, 'Deca Homes', 'Bacolod City', 0, 0, 'Ongoing', 0, NULL, '2025-09-08 11:09:13', NULL),
 (7, 'East Homes 5', 'Mansilingan, Bacolod City', 0, 0, 'Pending', 1, '2025-10-29 17:06:58', '2025-10-23 16:00:00', 'uploads/projects/7_east_homes_5'),
-(9, 'East Homes 1', 'Estefania', 3, 0, 'Ongoing', 0, NULL, '2025-10-27 06:06:43', NULL),
-(10, 'lumina', 'Estefania', 5, 0, 'Ongoing', 0, NULL, '2025-10-28 04:50:00', NULL),
-(11, 'East Homes 3', 'Estefania', 4, 33, 'Ongoing', 0, NULL, '2025-10-28 06:50:40', NULL);
+(10, 'lumina', 'Estefania', 5, 100, 'Completed', 0, NULL, '2025-10-28 04:50:00', NULL),
+(11, 'East Homes 3', 'Estefania', 4, 92, 'Ongoing', 0, NULL, '2025-10-28 06:50:40', NULL),
+(12, 'Jemena', 'Mansilingan', 5, 0, 'Ongoing', 0, NULL, '2025-12-04 13:31:17', NULL);
 
 -- --------------------------------------------------------
 
@@ -140,30 +164,34 @@ CREATE TABLE `project_checklists` (
   `completed_by_user_id` int(11) DEFAULT NULL,
   `completed_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `unit_id` int(11) DEFAULT NULL
+  `unit_id` int(11) DEFAULT NULL,
+  `proof_image_path` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `project_checklists`
 --
 
-INSERT INTO `project_checklists` (`id`, `project_id`, `item_description`, `is_completed`, `completed_by_user_id`, `completed_at`, `created_at`, `unit_id`) VALUES
-(8, 5, 'Ceiling', 0, NULL, NULL, '2025-10-21 03:43:10', 1),
-(9, 5, 'flooring', 0, NULL, NULL, '2025-10-24 00:43:27', 2),
-(11, 9, 'flooring', 0, NULL, NULL, '2025-10-27 06:07:02', 5),
-(12, 9, 'flooring', 0, NULL, NULL, '2025-10-27 06:07:02', 6),
-(25, 11, 'flooring', 0, NULL, NULL, '2025-10-28 07:24:27', NULL),
-(27, 11, 'flooring', 1, NULL, '2025-10-28 10:55:46', '2025-10-28 07:24:53', 23),
-(28, 11, 'flooring', 1, NULL, '2025-10-28 10:55:09', '2025-10-28 07:24:53', 24),
-(29, 11, 'flooring', 1, NULL, '2025-10-28 10:55:40', '2025-10-28 07:24:53', 25),
-(30, 11, 'ceiling', 1, NULL, '2025-11-01 07:53:28', '2025-10-28 07:25:11', 22),
-(33, 11, 'foundation', 1, NULL, '2025-10-28 10:55:47', '2025-10-28 07:44:55', 23),
-(34, 11, 'foundation', 1, NULL, '2025-10-28 10:57:42', '2025-10-28 07:44:55', 24),
-(35, 11, 'foundation', 0, NULL, NULL, '2025-10-28 07:44:55', 25),
-(42, 2, 'foundation', 0, NULL, NULL, '2025-10-29 09:36:25', NULL),
-(43, 2, 'foundation', 0, NULL, NULL, '2025-10-29 09:36:43', 21),
-(44, 11, 'foundation', 0, NULL, NULL, '2025-10-29 09:54:18', 22),
-(46, 11, 'flooring', 0, NULL, NULL, '2025-11-03 12:55:45', 22);
+INSERT INTO `project_checklists` (`id`, `project_id`, `item_description`, `is_completed`, `completed_by_user_id`, `completed_at`, `created_at`, `unit_id`, `proof_image_path`) VALUES
+(8, 5, 'Ceiling', 0, NULL, NULL, '2025-10-21 03:43:10', 1, NULL),
+(9, 5, 'flooring', 0, NULL, NULL, '2025-10-24 00:43:27', 2, NULL),
+(25, 11, 'flooring', 0, NULL, NULL, '2025-10-28 07:24:27', NULL, NULL),
+(27, 11, 'flooring', 1, NULL, '2025-12-07 11:16:21', '2025-10-28 07:24:53', 23, NULL),
+(28, 11, 'flooring', 1, NULL, '2025-10-28 10:55:09', '2025-10-28 07:24:53', 24, NULL),
+(29, 11, 'flooring', 1, NULL, '2025-10-28 10:55:40', '2025-10-28 07:24:53', 25, NULL),
+(30, 11, 'ceiling', 1, NULL, '2025-11-01 07:53:28', '2025-10-28 07:25:11', 22, '20251204_145932_da80703e_Generated_Image_October_18__2025_-_10_35AM__1.png'),
+(33, 11, 'foundation', 1, NULL, '2025-12-04 18:04:58', '2025-10-28 07:44:55', 23, NULL),
+(34, 11, 'foundation', 1, NULL, '2025-10-28 10:57:42', '2025-10-28 07:44:55', 24, NULL),
+(35, 11, 'foundation', 1, NULL, '2025-12-04 13:32:47', '2025-10-28 07:44:55', 25, NULL),
+(42, 2, 'foundation', 0, NULL, NULL, '2025-10-29 09:36:25', NULL, NULL),
+(43, 2, 'foundation', 0, NULL, NULL, '2025-10-29 09:36:43', 21, NULL),
+(44, 11, 'foundation', 1, NULL, '2025-12-04 13:32:09', '2025-10-29 09:54:18', 22, '20251204_170803_6aa334ba_3.png'),
+(46, 11, 'flooring', 0, NULL, NULL, '2025-11-03 12:55:45', 22, '20251204_170737_3506bc95_2.png'),
+(47, 10, 'flooring', 1, NULL, '2025-12-04 13:44:53', '2025-12-04 13:44:49', 15, NULL),
+(48, 10, 'flooring', 1, NULL, '2025-12-04 13:44:58', '2025-12-04 13:44:49', 16, NULL),
+(49, 10, 'flooring', 1, NULL, '2025-12-04 13:45:03', '2025-12-04 13:44:49', 17, NULL),
+(50, 10, 'flooring', 1, NULL, '2025-12-04 13:45:07', '2025-12-04 13:44:49', 18, NULL),
+(51, 10, 'flooring', 1, NULL, '2025-12-04 13:45:13', '2025-12-04 13:44:49', 19, NULL);
 
 -- --------------------------------------------------------
 
@@ -193,7 +221,8 @@ INSERT INTO `project_reports` (`id`, `project_id`, `unit_id`, `report_date`, `pr
 (6, 11, 23, '2025-11-06', 0, 'asdasd', 'asdasd', 'admin', '2025-11-01 00:55:11', '2025-11-06 13:46:56'),
 (10, 11, 22, '2025-11-06', 11, 'asda', 'asdasd', 'admin', '2025-11-01 06:52:51', '2025-11-06 13:46:47'),
 (11, 11, 23, '2025-01-11', 5, 'asdas', 'asdas', 'admin', '2025-11-01 06:54:56', '2025-11-03 12:49:34'),
-(12, 11, 22, '2025-11-01', 20, 'asda', 'asdas', 'admin', '2025-11-06 13:09:08', '2025-11-06 13:46:33');
+(12, 11, 22, '2025-11-01', 20, 'asda', 'asdas', 'admin', '2025-11-06 13:09:08', '2025-11-06 13:46:33'),
+(15, 11, 23, '2025-12-04', 0, 'asdas', 'asdasd', 'admin', '2025-12-04 10:16:17', '2025-12-04 10:16:17');
 
 -- --------------------------------------------------------
 
@@ -219,19 +248,21 @@ INSERT INTO `project_units` (`id`, `project_id`, `name`, `description`, `progres
 (2, 5, 'House 2', '', 0, '2025-10-21 10:58:50'),
 (3, 5, 'House 3', '', 0, '2025-10-21 11:04:02'),
 (4, 5, 'House 4', '', 0, '2025-10-21 11:07:04'),
-(5, 9, 'Unit 1', '', 0, '2025-10-27 14:06:43'),
-(6, 9, 'Unit 2', '', 0, '2025-10-27 14:06:43'),
-(15, 10, 'uraaa', 'Oysters Street', 0, '2025-10-28 12:50:00'),
-(16, 10, 'Unit 2', '', 0, '2025-10-28 12:50:00'),
-(17, 10, 'Unit 3', '', 0, '2025-10-28 12:50:00'),
-(18, 10, 'Unit 4', '', 0, '2025-10-28 13:01:15'),
-(19, 10, 'Unit 5', '', 0, '2025-10-28 13:01:15'),
-(20, 9, 'Unit 3', '', 0, '2025-10-28 14:27:28'),
+(15, 10, 'uraaa', 'Oysters Street', 100, '2025-10-28 12:50:00'),
+(16, 10, 'Unit 2', '', 100, '2025-10-28 12:50:00'),
+(17, 10, 'Unit 3', '', 100, '2025-10-28 12:50:00'),
+(18, 10, 'Unit 4', '', 100, '2025-10-28 13:01:15'),
+(19, 10, 'Unit 5', '', 100, '2025-10-28 13:01:15'),
 (21, 2, 'Block 1 Lot 2', 'Oysters Street', 0, '2025-10-28 14:27:52'),
-(22, 11, 'House 1 ', 'Ura!!!!~', 33, '2025-10-28 14:50:40'),
-(23, 11, 'Unit 2', '', 0, '2025-10-28 14:50:40'),
+(22, 11, 'House 1 ', '129sqr mtr.', 67, '2025-10-28 14:50:40'),
+(23, 11, 'Unit 2', '', 100, '2025-10-28 14:50:40'),
 (24, 11, 'Unit 3', '', 100, '2025-10-28 14:50:40'),
-(25, 11, 'Unit 4', '', 0, '2025-10-28 14:50:40');
+(25, 11, 'Unit 4', '', 100, '2025-10-28 14:50:40'),
+(26, 12, 'Unit 1', '', 0, '2025-12-04 21:31:17'),
+(27, 12, 'Unit 2', '', 0, '2025-12-04 21:31:17'),
+(28, 12, 'Unit 3', '', 0, '2025-12-04 21:31:17'),
+(29, 12, 'Unit 4', '', 0, '2025-12-04 21:31:17'),
+(30, 12, 'Unit 5', '', 0, '2025-12-04 21:31:17');
 
 -- --------------------------------------------------------
 
@@ -277,7 +308,8 @@ CREATE TABLE `report_material_usage` (
 
 INSERT INTO `report_material_usage` (`id`, `report_id`, `material_id`, `quantity_used`, `created_at`) VALUES
 (12, 5, 4, 4, '2025-11-03 13:42:19'),
-(13, 10, 10, 3, '2025-11-03 13:42:19');
+(13, 10, 10, 3, '2025-11-03 13:42:19'),
+(16, 15, 12, 25, '2025-12-04 10:16:17');
 
 -- --------------------------------------------------------
 
@@ -301,12 +333,19 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `username`, `password`, `role`, `created_at`, `updated_at`, `status`) VALUES
 (1, 'admin', '$2y$12$kGsUeMc665Otg3VoqmSE3OM8coqvyBwnBpuFdiS/ASaSuOocLX0ya', 'admin', '2025-11-03 14:51:49', '2025-11-06 11:13:09', 'active'),
-(2, 'constructor1', '$2y$12$2lzqG.Ruv.1iUFCc8nVeN.rSKHUhqlvJeQfJWqDpQobpAod6wIrAO', 'constructor', '2025-11-03 14:51:49', '2025-11-06 11:13:16', 'active'),
+(2, 'constructor1', '$2y$12$XfaFf.q37O3gvkU.6fiD6edOQ.VcScbdrUa75W2NrVLPHGGeN86/W', 'constructor', '2025-11-03 14:51:49', '2025-12-04 10:01:47', 'active'),
 (4, 'construtor2', 'constructor2', 'constructor', '2025-11-03 14:51:49', '2025-11-03 14:51:49', 'active');
 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `checklist_images`
+--
+ALTER TABLE `checklist_images`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `checklist_id` (`checklist_id`);
 
 --
 -- Indexes for table `materials`
@@ -372,34 +411,40 @@ ALTER TABLE `users`
 --
 
 --
+-- AUTO_INCREMENT for table `checklist_images`
+--
+ALTER TABLE `checklist_images`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
 -- AUTO_INCREMENT for table `materials`
 --
 ALTER TABLE `materials`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `projects`
 --
 ALTER TABLE `projects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `project_checklists`
 --
 ALTER TABLE `project_checklists`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
 
 --
 -- AUTO_INCREMENT for table `project_reports`
 --
 ALTER TABLE `project_reports`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `project_units`
 --
 ALTER TABLE `project_units`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT for table `report_images`
@@ -411,7 +456,7 @@ ALTER TABLE `report_images`
 -- AUTO_INCREMENT for table `report_material_usage`
 --
 ALTER TABLE `report_material_usage`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -422,6 +467,12 @@ ALTER TABLE `users`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `checklist_images`
+--
+ALTER TABLE `checklist_images`
+  ADD CONSTRAINT `checklist_images_ibfk_1` FOREIGN KEY (`checklist_id`) REFERENCES `project_checklists` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `materials`
