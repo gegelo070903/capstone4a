@@ -169,7 +169,7 @@ $basePath = (basename(dirname($_SERVER['PHP_SELF'])) === 'capstone') ? '' : '../
         <a href="<?= $basePath ?>dashboard.php" class="logo-container">
             <img src="<?= $basePath ?>assets/images/Sunshine_Sapphire_Construction_and_Supply_Logo.png" alt="Sunshine Sapphire Logo">
         </a>
-        <div class="user-info"><?= htmlspecialchars($_SESSION['user_role'] ?? 'User') ?></div>
+        <div class="user-info"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></div>
         <div class="sidebar-divider"></div>
 
         <div class="sidebar-links">
@@ -185,9 +185,11 @@ $basePath = (basename(dirname($_SERVER['PHP_SELF'])) === 'capstone') ? '' : '../
             <a href="<?= $basePath ?>reports/reports.php" class="<?= basename($_SERVER['PHP_SELF']) === 'reports.php' ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-lines"></i> Reports
             </a>
+            <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
             <a href="<?= $basePath ?>auth/accounts.php" class="<?= basename($_SERVER['PHP_SELF']) === 'accounts.php' ? 'active' : '' ?>">
                 <i class="fa-solid fa-user-gear"></i> Accounts
             </a>
+            <?php endif; ?>
         </div>
     </div>
     

@@ -55,7 +55,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
                 <td><?= htmlspecialchars($row['username']); ?></td>
                 <td>
                   <span class="role-badge <?= get_role_class($row['role']); ?>">
-                    <?= htmlspecialchars(ucfirst($row['role'])); ?>
+                    <?= $row['role'] === 'constructor' ? 'Employee' : htmlspecialchars(ucfirst($row['role'])); ?>
                   </span>
                 </td>
                 <td class="actions">
@@ -102,7 +102,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
           <label class="form-label">Role</label>
           <select name="role" class="form-select" required>
             <option value="admin">Admin</option>
-            <option value="constructor">Constructor</option>
+            <option value="constructor">Employee</option>
           </select>
         </div>
         <div class="form-actions-modal">
@@ -141,7 +141,7 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
           <label class="form-label">Role</label>
           <select name="role" id="editRole" class="form-select" required>
             <option value="admin">Admin</option>
-            <option value="constructor">Constructor</option>
+            <option value="constructor">Employee</option>
           </select>
         </div>
         <div class="form-actions-modal">
@@ -288,7 +288,7 @@ function attachRowEvents(row) {
 function addUserRow(user) {
   const tbody = document.querySelector('#usersTable tbody');
   const newRow = document.createElement('tr');
-  const roleDisplay = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+  const roleDisplay = user.role === 'constructor' ? 'Employee' : user.role.charAt(0).toUpperCase() + user.role.slice(1);
 
   newRow.setAttribute('data-id', user.id);
   newRow.innerHTML = `
@@ -320,7 +320,7 @@ function addUserRow(user) {
 function updateUserRow(user) {
   const row = document.querySelector(`#usersTable tr[data-id="${user.id}"]`);
   if (!row) return;
-  const roleDisplay = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+  const roleDisplay = user.role === 'constructor' ? 'Employee' : user.role.charAt(0).toUpperCase() + user.role.slice(1);
   
   // Update username cell
   row.querySelector('td:nth-child(2)').textContent = user.username;

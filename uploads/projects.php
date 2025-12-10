@@ -325,7 +325,9 @@ label {font-weight:600;color:#374151;font-size:14px;}
             <option value="oldest">Sort: Oldest</option>
             <option value="name">Sort: Name A–Z</option>
           </select>
+          <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
           <button class="btn-add" onclick="toggleOverlay(true)">+ Add Project</button>
+          <?php endif; ?>
           <button class="btn-archive" onclick="window.location.href='projects.php?archived=1'">View Archived</button>
         <?php else: ?>
           <button class="btn-archive" onclick="window.location.href='projects.php'">Back to Active</button>

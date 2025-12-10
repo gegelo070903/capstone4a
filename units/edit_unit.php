@@ -3,6 +3,31 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_login();
 
+// Handle POST request (from overlay or direct form)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  // Get unit_id and project_id from POST (overlay) or fallback to GET (direct page)
+  $unit_id = isset($_POST['unit_id']) ? (int)$_POST['unit_id'] : (isset($_GET['id']) ? (int)$_GET['id'] : 0);
+  $project_id = isset($_POST['project_id']) ? (int)$_POST['project_id'] : (isset($_GET['project_id']) ? (int)$_GET['project_id'] : 0);
+  
+  $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+  $description = isset($_POST['description']) ? trim($_POST['description']) : '';
+  
+  if ($unit_id <= 0 || $project_id <= 0 || empty($name)) {
+    header("Location: ../modules/view_project.php?id=$project_id&error=invalid_data");
+    exit;
+  }
+
+  // Update using prepared statement for security
+  $stmt = $conn->prepare("UPDATE project_units SET name = ?, description = ? WHERE id = ? AND project_id = ?");
+  $stmt->bind_param("ssii", $name, $description, $unit_id, $project_id);
+  $stmt->execute();
+  $stmt->close();
+
+  header("Location: ../modules/view_project.php?id=$project_id");
+  exit;
+}
+
+// Handle GET request (display edit form page)
 if (!isset($_GET['id']) || !isset($_GET['project_id'])) {
   die('<h3 style="color:red;">Invalid parameters provided.</h3>');
 }
@@ -14,19 +39,6 @@ $project_id = (int)$_GET['project_id'];
 $unit = $conn->query("SELECT * FROM project_units WHERE id = $unit_id")->fetch_assoc();
 if (!$unit) {
   die('<h3 style="color:red;">Unit not found.</h3>');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $name = $conn->real_escape_string($_POST['name']);
-  $description = $conn->real_escape_string($_POST['description']);
-  $progress = (int)$_POST['progress'];
-
-  $conn->query("UPDATE project_units 
-                SET name = '$name', description = '$description', progress = $progress 
-                WHERE id = $unit_id");
-
-  header("Location: ../modules/view_project.php?id=$project_id");
-  exit;
 }
 
 include '../includes/header.php';

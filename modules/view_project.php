@@ -35,7 +35,7 @@ if (!$project) die('<h3 style="color:red;">Project not found.</h3>');
 
 // Fetch project units WITH calculated progress from checklist items
 $units_stmt = $conn->prepare("
-    SELECT pu.id, pu.name, pu.progress,
+    SELECT pu.id, pu.name, pu.description, pu.progress,
            (SELECT COUNT(*) FROM project_checklists pc WHERE pc.unit_id = pu.id) as total_items,
            (SELECT COUNT(*) FROM project_checklists pc WHERE pc.unit_id = pu.id AND pc.is_completed = 1) as completed_items
     FROM project_units pu 
@@ -231,7 +231,7 @@ include '../includes/header.php';
               <div class="progress-bar" style="width: <?= $unit['progress']; ?>%;"></div>
             </div>
             <div class="unit-actions">
-              <a href="../units/edit_unit.php?id=<?= $unit['id']; ?>&project_id=<?= $project_id; ?>" class="btn-view">Edit Unit</a>
+              <button type="button" class="btn-view" onclick="openEditUnitOverlay(<?= $unit['id']; ?>, '<?= htmlspecialchars(addslashes($unit['name']), ENT_QUOTES); ?>', '<?= htmlspecialchars(addslashes($unit['description'] ?? ''), ENT_QUOTES); ?>')">Edit Unit</button>
               <a href="../checklist/view_checklist.php?unit_id=<?= $unit['id']; ?>&project_id=<?= $project_id; ?>" class="btn-view">View Checklist</a>
             </div>
           </div>
@@ -486,6 +486,33 @@ include '../includes/header.php';
       <div class="form-actions">
         <button type="button" class="btn-cancel" onclick="toggleMaterialOverlay(false)">Cancel</button>
         <button type="submit" class="btn-primary">Add Material</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ✅ EDIT UNIT OVERLAY -->
+<div class="overlay" id="editUnitOverlay">
+  <div class="overlay-card">
+    <button class="close-btn" onclick="toggleEditUnitOverlay(false)">✕</button>
+    <h3 class="overlay-title">Edit Unit</h3>
+    <form id="editUnitForm" method="POST" action="../units/edit_unit.php">
+      <input type="hidden" name="unit_id" id="edit_unit_id">
+      <input type="hidden" name="project_id" value="<?= $project_id; ?>">
+
+      <div class="form-group">
+        <label for="edit_unit_name">Unit Name:</label>
+        <input type="text" id="edit_unit_name" name="name" placeholder="Enter unit name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="edit_unit_description">Description:</label>
+        <input type="text" id="edit_unit_description" name="description" placeholder="Enter description (optional)">
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" onclick="toggleEditUnitOverlay(false)">Cancel</button>
+        <button type="submit" class="btn-primary">Save Changes</button>
       </div>
     </form>
   </div>
@@ -1222,6 +1249,18 @@ function toggleChecklistOverlay(show) {
 
 function toggleMaterialOverlay(show) {
   document.getElementById('materialOverlay').style.display = show ? 'flex' : 'none';
+}
+
+// ✅ Edit Unit Overlay Functions
+function toggleEditUnitOverlay(show) {
+  document.getElementById('editUnitOverlay').style.display = show ? 'flex' : 'none';
+}
+
+function openEditUnitOverlay(unitId, unitName, unitDescription) {
+  document.getElementById('edit_unit_id').value = unitId;
+  document.getElementById('edit_unit_name').value = unitName;
+  document.getElementById('edit_unit_description').value = unitDescription || '';
+  toggleEditUnitOverlay(true);
 }
 
 // ✅ NEW: Report Overlay Toggle
