@@ -1,6 +1,6 @@
 <?php
 // ============================================
-// process_add_checklist_item.php — Final Safe Version (No Duplicates)
+// process_add_checklist_item.php — Simplified Version
 // ============================================
 
 require_once __DIR__ . '/../includes/db.php';
@@ -26,103 +26,59 @@ if (empty($_POST['item_description'])) {
 }
 $item_description = trim($_POST['item_description']);
 
-// --- 3. Determine Apply Mode ---
-$apply_mode = $_POST['apply_mode'] ?? 'single';
-// Ensure unit_id is set to null if not provided/selected, as per bind_param compatibility
-$unit_id = isset($_POST['unit_id']) && $_POST['unit_id'] !== '' ? (int)$_POST['unit_id'] : null;
-
-// Array to track which units need progress recalculation
-$units_to_recalculate = [];
+// --- 3. Validate Unit ID ---
+if (!isset($_POST['unit_id']) || $_POST['unit_id'] === '') {
+    header("Location: ../modules/view_project.php?id=$project_id&status=checklist_item_added_error&message=" . urlencode("Please select a unit."));
+    exit();
+}
+$unit_id = (int)$_POST['unit_id'];
 
 try {
     $conn->begin_transaction();
 
-    // --- 4. Prepare insert statement (assumes a table named 'project_checklists') ---
+    // --- 4. Insert checklist item ---
     $stmt = $conn->prepare("
         INSERT INTO project_checklists (project_id, unit_id, item_description, is_completed, created_at)
         VALUES (?, ?, ?, 0, NOW())
     ");
 
-    // --- 5. Apply to All Units ---
-    if ($apply_mode === 'all') {
-        $units = $conn->query("SELECT id FROM project_units WHERE project_id = $project_id");
-        while ($u = $units->fetch_assoc()) {
-            $current_unit_id = (int)$u['id'];
-            try {
-                $stmt->bind_param("iis", $project_id, $current_unit_id, $item_description);
-                $stmt->execute();
-                // Add unit to recalculation list
-                $units_to_recalculate[] = $current_unit_id;
-            } catch (mysqli_sql_exception $e) {
-                // Skip duplicates silently
-                if ($e->getCode() == 1062) continue; 
-                throw $e;
-            }
-        }
-    } 
-    // --- 6. Apply to single unit or general ---
-    else {
-        try {
-            // Note: unit_id is already an integer or null
-            $stmt->bind_param("iis", $project_id, $unit_id, $item_description);
-            $stmt->execute();
-            // Add unit to recalculation list if a specific unit was selected
-            if ($unit_id !== null) {
-                $units_to_recalculate[] = $unit_id;
-            }
-        } catch (mysqli_sql_exception $e) {
-            if ($e->getCode() == 1062) {
-                // Duplicate entry detected
-                $conn->rollback();
-                header("Location: ../modules/view_project.php?id=$project_id&status=duplicate_item&message=" . urlencode("This checklist item already exists for this unit."));
-                exit();
-            } else {
-                throw $e;
-            }
+    try {
+        $stmt->bind_param("iis", $project_id, $unit_id, $item_description);
+        $stmt->execute();
+    } catch (mysqli_sql_exception $e) {
+        if ($e->getCode() == 1062) {
+            // Duplicate entry detected
+            $conn->rollback();
+            header("Location: ../modules/view_project.php?id=$project_id&status=duplicate_item&message=" . urlencode("This checklist item already exists for this unit."));
+            exit();
+        } else {
+            throw $e;
         }
     }
-
     $stmt->close();
 
+    // --- 5. Recalculate progress for the unit ---
+    $total_stmt = $conn->prepare("SELECT COUNT(*) AS total FROM project_checklists WHERE unit_id = ?");
+    $total_stmt->bind_param('i', $unit_id);
+    $total_stmt->execute();
+    $total = (int)($total_stmt->get_result()->fetch_assoc()['total'] ?? 0);
+    $total_stmt->close();
 
-    // 💥 INSERTION START: Secure version of the held code block 💥
-    // === STEP 7 : Recalculate progress for affected units ===
-    if (!empty($units_to_recalculate)) {
-        // Prepare statements outside the loop
-        $total_stmt = $conn->prepare("SELECT COUNT(*) AS total FROM project_checklists WHERE unit_id = ?");
-        $done_stmt = $conn->prepare("SELECT COUNT(*) AS done FROM project_checklists WHERE unit_id = ? AND is_completed = 1");
-        $update_stmt = $conn->prepare("UPDATE project_units SET progress = ? WHERE id = ?");
+    $done_stmt = $conn->prepare("SELECT COUNT(*) AS done FROM project_checklists WHERE unit_id = ? AND is_completed = 1");
+    $done_stmt->bind_param('i', $unit_id);
+    $done_stmt->execute();
+    $done = (int)($done_stmt->get_result()->fetch_assoc()['done'] ?? 0);
+    $done_stmt->close();
 
-        foreach (array_unique($units_to_recalculate) as $recalc_unit_id) {
-            // Count all checklist items for this unit
-            $total_stmt->bind_param('i', $recalc_unit_id);
-            $total_stmt->execute();
-            $total = (int)($total_stmt->get_result()->fetch_assoc()['total'] ?? 0);
+    $progress = $total > 0 ? round(($done / $total) * 100) : 0;
 
-            // Count completed ones
-            $done_stmt->bind_param('i', $recalc_unit_id);
-            $done_stmt->execute();
-            $done = (int)($done_stmt->get_result()->fetch_assoc()['done'] ?? 0);
-
-            // Compute percentage
-            $progress = $total > 0 ? round(($done / $total) * 100) : 0;
-
-            // Update the project_units table
-            $update_stmt->bind_param('ii', $progress, $recalc_unit_id);
-            if (!$update_stmt->execute()) {
-                 // Throwing an exception will trigger the catch block and rollback
-                 throw new Exception("Failed to update unit progress for unit ID: $recalc_unit_id");
-            }
-        }
-        
-        $total_stmt->close();
-        $done_stmt->close();
-        $update_stmt->close();
-    }
-    // 💥 INSERTION END 💥
+    $update_stmt = $conn->prepare("UPDATE project_units SET progress = ? WHERE id = ?");
+    $update_stmt->bind_param('ii', $progress, $unit_id);
+    $update_stmt->execute();
+    $update_stmt->close();
 
     $conn->commit();
-    header("Location: ../modules/view_project.php?id=$project_id&tab=units&status=checklist_item_added_success"); // Direct to Units tab as progress might have changed
+    header("Location: ../modules/view_project.php?id=$project_id&tab=units&status=checklist_item_added_success");
     exit();
 
 } catch (Exception $e) {

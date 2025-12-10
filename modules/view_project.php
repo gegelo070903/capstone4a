@@ -405,7 +405,7 @@ include '../includes/header.php';
   </div>
 </div>
 
-<!-- ✅ ADD CHECKLIST OVERLAY (UNCHANGED) -->
+<!-- ✅ ADD CHECKLIST OVERLAY -->
 <div class="overlay" id="checklistOverlay">
   <div class="overlay-card">
     <button class="close-btn" onclick="toggleChecklistOverlay(false)">✕</button>
@@ -419,17 +419,9 @@ include '../includes/header.php';
       </div>
 
       <div class="form-group">
-        <label>Apply To:</label>
-        <div class="radio-group">
-          <label><input type="radio" name="apply_mode" value="single" checked> This Unit Only</label>
-          <label><input type="radio" name="apply_mode" value="all"> Apply to All Units</label>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="unit_id">Select Unit (if not applying to all):</label>
-        <select id="unit_id" name="unit_id">
-          <option value="">-- General / No Unit --</option>
+        <label for="unit_id">Select Unit:</label>
+        <select id="unit_id" name="unit_id" required>
+          <option value="">-- Select a Unit --</option>
           <?php foreach ($units as $unit): ?>
             <option value="<?= $unit['id']; ?>"><?= htmlspecialchars($unit['name']); ?></option>
           <?php endforeach; ?>
