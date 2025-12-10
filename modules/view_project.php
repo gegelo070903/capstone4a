@@ -422,6 +422,7 @@ include '../includes/header.php';
         <label for="unit_id">Select Unit:</label>
         <select id="unit_id" name="unit_id" required>
           <option value="">-- Select a Unit --</option>
+          <option value="all">Apply to All Units</option>
           <?php foreach ($units as $unit): ?>
             <option value="<?= $unit['id']; ?>"><?= htmlspecialchars($unit['name']); ?></option>
           <?php endforeach; ?>
