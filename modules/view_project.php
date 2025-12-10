@@ -750,7 +750,9 @@ include '../includes/header.php';
   border-radius: 8px;
   font-weight: 600;
   transition: background 0.2s ease;
-  margin-right: 8px; 
+  margin-right: 8px;
+  border: none;
+  cursor: pointer;
 }
 .btn-edit {
   background: #2563eb !important;
