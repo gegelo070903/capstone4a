@@ -4,16 +4,159 @@ ob_start(); // ✅ Start output buffering (prevents header warnings)
 // Set timezone immediately for consistent date handling
 date_default_timezone_set('Asia/Manila'); // set timezone to PH
 
-require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
+
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// ============================================
+// AJAX HANDLER: Return JSON for overlay form submissions
+// ============================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_request'])) {
+    header('Content-Type: application/json');
+    ob_end_clean(); // Clear any buffered output
+    
+    $response = ['success' => false, 'errors' => []];
+    
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        $response['errors'][] = 'You must be logged in to add a report.';
+        echo json_encode($response);
+        exit;
+    }
+    
+    // CSRF validation
+    if (!verify_csrf_token($_POST['csrf'] ?? '')) {
+        $response['errors'][] = 'Invalid session token. Please reload the page.';
+        echo json_encode($response);
+        exit;
+    }
+    
+    // Get form data
+    $project_id = (int)($_POST['project_id'] ?? 0);
+    $unit_id = (int)($_POST['unit_id'] ?? 0);
+    $progress_percentage = max(0, min(100, (int)($_POST['progress_percentage'] ?? 0)));
+    $work_done = trim($_POST['work_done'] ?? $_POST['work_done_hidden'] ?? '');
+    $remarks = trim($_POST['remarks'] ?? '');
+    $created_by = $_SESSION['username'] ?? 'Unknown';
+    
+    // Parse date (MM-DD-YYYY format)
+    $report_date = date('Y-m-d');
+    if (!empty($_POST['report_date'])) {
+        $date_in = trim($_POST['report_date']);
+        $dt = DateTime::createFromFormat('m-d-Y', $date_in, new DateTimeZone('Asia/Manila'));
+        if ($dt !== false) {
+            $report_date = $dt->format('Y-m-d');
+        }
+    }
+    
+    // Material data
+    $material_ids = $_POST['material_id'] ?? [];
+    $quantities = $_POST['quantity_used'] ?? [];
+    
+    // Validation
+    if ($project_id <= 0) $response['errors'][] = 'Invalid project ID.';
+    if ($unit_id <= 0) $response['errors'][] = 'Please select a unit for this report.';
+    if (empty($work_done)) $response['errors'][] = 'Please select or describe the work done.';
+    
+    if (!empty($response['errors'])) {
+        echo json_encode($response);
+        exit;
+    }
+    
+    try {
+        $conn->begin_transaction();
+        
+        // Insert the report
+        $stmt = $conn->prepare("
+            INSERT INTO project_reports 
+              (project_id, unit_id, report_date, progress_percentage, work_done, remarks, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->bind_param('iisisss', $project_id, $unit_id, $report_date, $progress_percentage, $work_done, $remarks, $created_by);
+        
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to insert report: ' . $stmt->error);
+        }
+        $report_id = $stmt->insert_id;
+        $stmt->close();
+        
+        // Handle proof images from checklist
+        $proof_images_json = $_POST['proof_images_from_checklist'] ?? '';
+        if (!empty($proof_images_json)) {
+            $proof_images = json_decode($proof_images_json, true);
+            if (is_array($proof_images) && count($proof_images) > 0) {
+                $img_stmt = $conn->prepare("INSERT INTO report_images (report_id, image_path) VALUES (?, ?)");
+                foreach ($proof_images as $img_path) {
+                    $source = __DIR__ . '/../uploads/checklist_proofs/' . $img_path;
+                    $dest_filename = 'report_' . $report_id . '_' . basename($img_path);
+                    $dest = __DIR__ . '/report_images/' . $dest_filename;
+                    
+                    if (file_exists($source)) {
+                        copy($source, $dest);
+                        $img_stmt->bind_param('is', $report_id, $dest_filename);
+                        $img_stmt->execute();
+                    }
+                }
+                $img_stmt->close();
+            }
+        }
+        
+        // Handle material deductions
+        if (!empty($material_ids) && is_array($material_ids)) {
+            $insMU = $conn->prepare("
+              INSERT INTO report_material_usage (report_id, material_id, quantity_used)
+              VALUES (?, ?, ?)
+              ON DUPLICATE KEY UPDATE quantity_used = quantity_used + VALUES(quantity_used)
+            ");
+            
+            for ($i = 0; $i < count($material_ids); $i++) {
+                $mid = (int)$material_ids[$i];
+                $qty = (int)($quantities[$i] ?? 0);
+                if ($mid <= 0 || $qty <= 0) continue;
+                
+                [$ok, $err] = deduct_material_quantity($conn, $mid, $qty);
+                if (!$ok) throw new Exception("Material deduction failed: $err");
+                
+                $insMU->bind_param('iii', $report_id, $mid, $qty);
+                if (!$insMU->execute()) throw new Exception('Failed to record material usage.');
+            }
+            $insMU->close();
+        }
+        
+        // Update unit progress
+        [$ok, $msg] = update_unit_progress($conn, $unit_id, $progress_percentage);
+        if (!$ok) throw new Exception("Failed to update unit progress: $msg");
+        
+        $conn->commit();
+        
+        $response['success'] = true;
+        $response['message'] = 'Report added successfully!';
+        $response['report_id'] = $report_id;
+        
+    } catch (Exception $e) {
+        $conn->rollback();
+        $response['errors'][] = $e->getMessage();
+    }
+    
+    echo json_encode($response);
+    exit;
+}
+// ============================================
+// END AJAX HANDLER
+// ============================================
+
+require_once __DIR__ . '/../includes/header.php';
 
 if (!isset($_SESSION['username'])) {
     header('Location: /capstone/users/login.php');
     exit;
 }
 
-$project_id = isset($_GET['project_id']) ? (int)$_GET['project_id'] : 0;
+$project_id = isset($_GET['project_id']) ? (int)$_GET['project_id'] : (int)($_POST['project_id'] ?? 0);
 
 // Fetch project info
 $project = null;

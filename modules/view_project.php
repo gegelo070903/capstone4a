@@ -525,7 +525,8 @@ include '../includes/header.php';
     </div>
     
     <!-- IMPORTANT: action points to the processing script and uses multipart/form-data -->
-    <form id="addReportForm" method="post" action="../reports/process_add_report.php" enctype="multipart/form-data">
+    <form id="addReportForm" method="post" action="../reports/add_report.php" enctype="multipart/form-data">
+        <input type="hidden" name="ajax_request" value="1">
         <input type="hidden" name="project_id" value="<?= $project_id ?>">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
 
@@ -1401,7 +1402,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           // Client-side validation for progress
-          if (parseInt(progHidden.value) < 0 || parseInt(progHidden.value) > 100) {
+          const progressVal = parseInt(progInput.value) || 0;
+          if (progressVal < 0 || progressVal > 100) {
               errorList.innerHTML = '<li>Progress must be between 0 and 100%.</li>';
               errorBox.style.display = 'block';
               return;
