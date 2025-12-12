@@ -222,6 +222,9 @@ $projects = $stmt->get_result();
   padding:20px 24px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   margin-bottom: 25px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 /* === Projects Header Row === */

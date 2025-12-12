@@ -189,6 +189,11 @@ function applyFilters() {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #f8fafc;
+    padding: 15px 0;
 }
 .filter-bar input, .filter-bar select {
     padding: 8px 12px;

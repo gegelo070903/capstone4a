@@ -85,10 +85,10 @@ while ($row = $actions_result->fetch_assoc()) {
 
     <!-- Filter Section -->
     <div class="card filter-card">
-      <form method="GET" class="filter-form">
+      <form method="GET" class="filter-form" id="filterForm">
         <div class="filter-group">
           <label for="action">Action Type</label>
-          <select name="action" id="action">
+          <select name="action" id="action" onchange="document.getElementById('filterForm').submit()">
             <option value="">All Actions</option>
             <?php foreach ($action_types as $type): ?>
               <option value="<?= htmlspecialchars($type) ?>" <?= $action_filter === $type ? 'selected' : '' ?>>
@@ -99,10 +99,9 @@ while ($row = $actions_result->fetch_assoc()) {
         </div>
         <div class="filter-group">
           <label for="date">Date</label>
-          <input type="date" name="date" id="date" value="<?= htmlspecialchars($date_filter) ?>">
+          <input type="date" name="date" id="date" value="<?= htmlspecialchars($date_filter) ?>" onchange="document.getElementById('filterForm').submit()">
         </div>
         <div class="filter-buttons">
-          <button type="submit" class="btn-filter"><i class="fa-solid fa-filter"></i> Apply Filter</button>
           <a href="activity_logs.php" class="btn-clear"><i class="fa-solid fa-times"></i> Clear</a>
         </div>
       </form>
@@ -219,6 +218,9 @@ while ($row = $actions_result->fetch_assoc()) {
   padding: 20px 24px;
   background: #f8fafc;
   border: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .filter-form {
