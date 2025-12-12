@@ -147,46 +147,46 @@ function filterUnits() {
   font-size: 14px;
 }
 
-/* Controls */
+/* === Controls (Search + Sort + Buttons) === */
 .controls {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
-.controls input {
+
+.controls input,
+.controls select {
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  width: 230px;
   font-size: 14px;
+  background-color: #fff;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.controls input:focus {
+.controls input {
+  width: 230px;
+}
+.controls input:focus,
+.controls select:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
-.controls select {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background-color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-}
+
 .btn-generate {
-  background-color: #2563eb;
+  background: #2563eb;
   color: #fff;
+  padding: 10px 16px;
   border: none;
-  padding: 8px 14px;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
+  font-size: 14px;
   transition: background-color 0.2s;
 }
 .btn-generate:hover {
-  background-color: #1d4ed8;
+  background: #1d4ed8;
 }
 
 /* === Unit Cards === */

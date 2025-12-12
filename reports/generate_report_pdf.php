@@ -291,6 +291,7 @@ Generated on ' . date("F j, Y, g:i A") . '
 ';
 
 // Render PDF
+log_activity($conn, 'GENERATE_PDF', "Generated PDF report for Unit: {$unit['name']} (ID: $unit_id) in Project: {$project['name']} (ID: $project_id)");
 $mpdf->WriteHTML($html);
 $mpdf->Output('SunshineSapphire_Unit_Report_' . $unit_id . '_' . date("Ymd_His") . '.pdf', 'I');
 ?>

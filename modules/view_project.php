@@ -72,7 +72,7 @@ if ($project['status'] !== 'Completed' && $overall_progress >= 100) {
     
     if ($update_stmt->execute()) {
         $project['status'] = 'Completed'; 
-        echo "<script>alert('🎉 Project automatically set to Completed! Overall progress reached 100%.');</script>";
+        echo "<script>document.addEventListener('DOMContentLoaded', function() { showToast('Project automatically set to Completed! Overall progress reached 100%.', 'success'); });</script>";
     }
     $update_stmt->close();
 } elseif ($project['status'] === 'Completed' && $overall_progress < 100) {
@@ -118,7 +118,7 @@ if ($ms) {
     $ms->close();
 } else {
     // This alert should disappear once the database is fixed.
-    echo "<script>alert('FATAL ERROR: Materials query preparation failed. Check your materials table and connection.');</script>";
+    echo "<script>document.addEventListener('DOMContentLoaded', function() { showToast('FATAL ERROR: Materials query preparation failed. Check your materials table and connection.', 'error'); });</script>";
 }
 
 
@@ -156,7 +156,7 @@ if ($check_stmt) {
     }
     $check_stmt->close();
 } else {
-    echo "<script>alert('FATAL ERROR: Checklist query preparation failed.');</script>";
+    echo "<script>document.addEventListener('DOMContentLoaded', function() { showToast('FATAL ERROR: Checklist query preparation failed.', 'error'); });</script>";
 }
 
 // 3. Determine initial form values (prefill)
@@ -1417,9 +1417,9 @@ document.addEventListener('DOMContentLoaded', () => {
           .then(response => response.json())
           .then(data => {
               if (data.success) {
-                  alert('✅ Report added successfully!');
+                  showToast('Report added successfully!', 'success');
                   toggleReportOverlay(false);
-                  window.location.reload(); // Reload parent page to update reports tab
+                  setTimeout(() => window.location.reload(), 1000); // Reload parent page to update reports tab
               } else {
                   // Display server-side errors
                   errorList.innerHTML = data.errors.map(err => `<li>${err}</li>`).join('');

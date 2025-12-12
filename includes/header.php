@@ -158,9 +158,164 @@ $basePath = (basename(dirname($_SERVER['PHP_SELF'])) === 'capstone') ? '' : '../
             color: #6b7280;
             padding-top: 15px;
         }
+
+        /* ========= Toast Notifications ========= */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 380px;
+        }
+
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 280px;
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .toast.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .toast.info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .toast i {
+            font-size: 18px;
+        }
+
+        .toast .toast-message {
+            flex: 1;
+        }
+
+        .toast .toast-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .toast .toast-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        .toast.hiding {
+            animation: slideOut 0.3s ease-in forwards;
+        }
     </style>
 </head>
 <body>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// Global Toast Notification System
+function showToast(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+
+    let icon = 'fa-circle-info';
+    if (type === 'success') icon = 'fa-circle-check';
+    else if (type === 'error') icon = 'fa-circle-xmark';
+    else if (type === 'warning') icon = 'fa-triangle-exclamation';
+
+    toast.innerHTML = `
+        <i class="fa-solid ${icon}"></i>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="closeToast(this)"><i class="fa-solid fa-xmark"></i></button>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto remove after duration
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.classList.add('hiding');
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, duration);
+}
+
+function closeToast(btn) {
+    const toast = btn.closest('.toast');
+    if (toast) {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+    }
+}
+
+// Check for URL parameters for toast messages
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    const message = urlParams.get('message');
+
+    if (status === 'success' && message) {
+        showToast(decodeURIComponent(message), 'success');
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (status === 'error' && message) {
+        showToast(decodeURIComponent(message), 'error');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (status === 'warning' && message) {
+        showToast(decodeURIComponent(message), 'warning');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
+</script>
 
 <!-- Sidebar -->
 <div class="sidebar">
@@ -169,7 +324,7 @@ $basePath = (basename(dirname($_SERVER['PHP_SELF'])) === 'capstone') ? '' : '../
         <a href="<?= $basePath ?>dashboard.php" class="logo-container">
             <img src="<?= $basePath ?>assets/images/Sunshine_Sapphire_Construction_and_Supply_Logo.png" alt="Sunshine Sapphire Logo">
         </a>
-        <div class="user-info"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></div>
+        <div class="user-info"><?= htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['username'] ?? 'User') ?></div>
         <div class="sidebar-divider"></div>
 
         <div class="sidebar-links">
@@ -185,9 +340,14 @@ $basePath = (basename(dirname($_SERVER['PHP_SELF'])) === 'capstone') ? '' : '../
             <a href="<?= $basePath ?>reports/reports.php" class="<?= basename($_SERVER['PHP_SELF']) === 'reports.php' ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-lines"></i> Reports
             </a>
-            <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+            <?php if (is_admin()): ?>
             <a href="<?= $basePath ?>auth/accounts.php" class="<?= basename($_SERVER['PHP_SELF']) === 'accounts.php' ? 'active' : '' ?>">
                 <i class="fa-solid fa-user-gear"></i> Accounts
+            </a>
+            <?php endif; ?>
+            <?php if (is_super_admin()): ?>
+            <a href="<?= $basePath ?>auth/activity_logs.php" class="<?= basename($_SERVER['PHP_SELF']) === 'activity_logs.php' ? 'active' : '' ?>">
+                <i class="fa-solid fa-clock-rotate-left"></i> Activity Logs
             </a>
             <?php endif; ?>
         </div>

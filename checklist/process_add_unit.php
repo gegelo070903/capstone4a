@@ -69,6 +69,9 @@ $stmt = $conn->prepare("INSERT INTO project_units (project_id, name, description
 $stmt->bind_param('iss', $project_id, $name, $description);
 
 if ($stmt->execute()) {
+    // Log the activity
+    $new_unit_id = $stmt->insert_id;
+    log_activity($conn, 'ADD_UNIT', "Added unit: $name (ID: $new_unit_id) to project ID: $project_id");
     // ✅ Success: redirect back to project page
     header("Location: ../modules/view_project.php?id=" . $project_id . "&status=unit_added_success");
     exit();

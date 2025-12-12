@@ -188,6 +188,8 @@ if (isset($_POST['update_report'])) {
 
 
     $conn->commit();
+    // Log the edit action
+    log_activity($conn, 'EDIT_REPORT', "Edited report ID: $report_id (Date: $report_date) for project ID: $project_id");
     header("Location: ../modules/view_project.php?id=$project_id&tab=reports");
     exit;
 

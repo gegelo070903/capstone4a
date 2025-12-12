@@ -12,13 +12,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die('Invalid quantity.');
     }
 
-    // ✅ Get current quantity
-    $stmt = $conn->prepare("SELECT remaining_quantity FROM materials WHERE id = ?");
+    // ✅ Get current quantity and name
+    $stmt = $conn->prepare("SELECT name, remaining_quantity FROM materials WHERE id = ?");
     $stmt->bind_param("i", $material_id);
     $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
 
     if (!$result) die('Material not found.');
+    
+    $material_name = $result['name'];
 
     $remaining = $result['remaining_quantity'] - $used_qty;
     if ($remaining < 0) $remaining = 0;
@@ -33,6 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $remarks = trim($_POST['remarks']) ?: 'Used in project';
     $log->bind_param("iids", $material_id, $project_id, $used_qty, $remarks);
     $log->execute();
+    
+    // Log activity
+    log_activity($conn, 'DEDUCT_MATERIAL', "Deducted $used_qty from material: $material_name (ID: $material_id) in project ID: $project_id");
 
     header("Location: ../modules/view_project.php?id=$project_id&tab=materials");
     exit();

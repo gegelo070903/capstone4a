@@ -133,6 +133,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_request'])) {
         
         $conn->commit();
         
+        // Log the activity
+        log_activity($conn, 'ADD_REPORT', "Added report for Project ID: $project_id, Unit ID: $unit_id, Work: $work_done");
+        
         $response['success'] = true;
         $response['message'] = 'Report added successfully!';
         $response['report_id'] = $report_id;
@@ -349,6 +352,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$ok) throw new Exception("Failed to update unit progress: $msg");
 
                 $conn->commit();
+                
+                // Log the activity
+                log_activity($conn, 'ADD_REPORT', "Added report for Project ID: $project_id, Unit ID: $unit_id, Work: $work_done");
+                
                 // ✅ REDIRECT IS CORRECT: Go back to the 'reports' tab
                 header("Location: ../modules/view_project.php?id=$project_id&tab=reports");
                 exit;

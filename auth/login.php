@@ -5,9 +5,7 @@ error_reporting(E_ALL);
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/../includes/db.php';
-
-// Helpers
-function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+require_once __DIR__ . '/../includes/functions.php';
 
 // CSRF
 if (empty($_SESSION['csrf_token'])) {
@@ -40,7 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($username === '' || $password === '') {
         $error = 'Please enter both username and password.';
     } else {
-        $stmt = $conn->prepare('SELECT id, username, password, role FROM users WHERE username = ? LIMIT 1');
+        // Check if display_name column exists
+        $colCheck = $conn->query("SHOW COLUMNS FROM users LIKE 'display_name'");
+        $hasDisplayName = $colCheck && $colCheck->num_rows > 0;
+        
+        if ($hasDisplayName) {
+            $stmt = $conn->prepare('SELECT id, username, display_name, password, role FROM users WHERE username = ? LIMIT 1');
+        } else {
+            $stmt = $conn->prepare('SELECT id, username, password, role FROM users WHERE username = ? LIMIT 1');
+        }
         $stmt->bind_param('s', $username);
         $stmt->execute();
         $res = $stmt->get_result();
@@ -56,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = (int)$user['id'];
                 $_SESSION['username'] = $user['username'];
+                $_SESSION['display_name'] = $user['display_name'] ?? $user['username'];
                 $_SESSION['user_role'] = $user['role'];
 
                 if (!str_starts_with($stored, '$2y$')) {
@@ -65,6 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $up->execute();
                     $up->close();
                 }
+
+                // Log the login activity
+                log_activity($conn, 'LOGIN', 'User logged in successfully', (int)$user['id'], $user['username']);
 
                 header('Location: ../dashboard.php');
                 exit;

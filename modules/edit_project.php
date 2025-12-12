@@ -23,6 +23,9 @@ $stmt->bind_param("ssisi", $name, $location, $units, $status, $id);
 $stmt->execute();
 $stmt->close();
 
+// Log the edit action
+log_activity($conn, 'EDIT_PROJECT', "Edited project: $name (ID: $id) - Location: $location, Units: $units, Status: $status");
+
 // Adjust units dynamically
 $res = $conn->prepare("SELECT COUNT(*) FROM project_units WHERE project_id=?");
 $res->bind_param("i", $id);

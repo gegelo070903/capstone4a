@@ -110,6 +110,11 @@ try {
     }
 
     $conn->commit();
+    
+    // Log the activity
+    $units_applied = $apply_to_all ? 'All Units' : "Unit ID: $unit_selection";
+    log_activity($conn, 'ADD_CHECKLIST', "Added checklist item: '$item_description' to $units_applied (Project ID: $project_id)");
+    
     header("Location: ../modules/view_project.php?id=$project_id&tab=units&status=checklist_item_added_success");
     exit();
 

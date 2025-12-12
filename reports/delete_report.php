@@ -10,6 +10,17 @@ if ($report_id <= 0 || $project_id <= 0) {
     die('Invalid request.');
 }
 
+// Get report date for logging
+$report_date = '';
+$stmt_get = $conn->prepare("SELECT report_date FROM project_reports WHERE id = ?");
+$stmt_get->bind_param("i", $report_id);
+$stmt_get->execute();
+$result = $stmt_get->get_result();
+if ($row = $result->fetch_assoc()) {
+    $report_date = $row['report_date'];
+}
+$stmt_get->close();
+
 try {
     $conn->begin_transaction();
 
@@ -47,6 +58,9 @@ try {
     $conn->query("DELETE FROM project_reports WHERE id = $report_id");
 
     $conn->commit();
+    
+    // Log the delete action
+    log_activity($conn, 'DELETE_REPORT', "Deleted report ID: $report_id (Date: $report_date) from project ID: $project_id");
 
     header("Location: ../modules/view_project.php?id=$project_id&tab=reports");
     exit;

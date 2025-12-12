@@ -494,6 +494,9 @@ $html .= '</body>';
 // 5. OUTPUT PDF
 // ====================================================================
 
+// Log the PDF generation activity
+log_activity($conn, 'GENERATE_PDF', "Generated PDF report for Project: {$project['name']} (ID: $project_id)");
+
 $mpdf->WriteHTML($html);
 $mpdf->Output('SunshineSapphire_' . preg_replace('/[^a-zA-Z0-9]/', '_', $project['name']) . '_Report_' . date("Ymd") . '.pdf', 'I');
 ?>

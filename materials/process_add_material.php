@@ -89,6 +89,9 @@ try {
     }
     
     $conn->commit();
+    
+    // Log the activity
+    log_activity($conn, 'ADD_MATERIAL', "Added material: $name (Qty: $total_quantity $unit) to Project ID: $project_id");
 
 } catch (Exception $e) {
     $conn->rollback();

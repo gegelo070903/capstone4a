@@ -40,10 +40,16 @@ function require_login(): void {
     }
 }
 
-// ✅ Check if logged-in user is admin
+// ✅ Check if logged-in user is admin (includes super_admin)
 function is_admin(): bool {
     ensure_session_started();
-    return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
+    return isset($_SESSION['user_role']) && in_array($_SESSION['user_role'], ['admin', 'super_admin']);
+}
+
+// ✅ Check if logged-in user is super_admin
+function is_super_admin(): bool {
+    ensure_session_started();
+    return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'super_admin';
 }
 
 // ✅ Require admin access
@@ -377,4 +383,60 @@ function get_materials_used_for_report(mysqli $conn, int $reportId): array {
     $stmt->close();
 
     return $materials;
+}
+
+// ---------------------------------------------------------------
+// ACTIVITY LOGGING
+// ---------------------------------------------------------------
+
+/**
+ * Log an activity to the activity_logs table
+ * 
+ * @param mysqli $conn Database connection
+ * @param string $action The action being performed (e.g., 'LOGIN', 'ADD_PROJECT', etc.)
+ * @param string $details Additional details about the action
+ * @param int|null $user_id Override user ID (useful for login when session not yet set)
+ * @param string|null $username Override username (useful for login)
+ * @return bool True if logged successfully
+ */
+function log_activity(mysqli $conn, string $action, string $details = '', ?int $user_id = null, ?string $username = null): bool {
+    ensure_session_started();
+    
+    // Use provided values or get from session
+    $user_id = $user_id ?? ($_SESSION['user_id'] ?? 0);
+    $username = $username ?? ($_SESSION['username'] ?? 'Unknown');
+    
+    // Get IP address
+    $ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+    
+    try {
+        $stmt = $conn->prepare("
+            INSERT INTO activity_logs (user_id, username, action, details, ip_address, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW())
+        ");
+        
+        if (!$stmt) {
+            error_log("log_activity prepare failed: " . $conn->error);
+            return false;
+        }
+        
+        $stmt->bind_param('issss', $user_id, $username, $action, $details, $ip_address);
+        $result = $stmt->execute();
+        $stmt->close();
+        
+        return $result;
+    } catch (Exception $e) {
+        error_log("log_activity error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Require super admin access
+ */
+function require_super_admin(): void {
+    if (!is_super_admin()) {
+        header('Location: ../dashboard.php?error=unauthorized');
+        exit();
+    }
 }

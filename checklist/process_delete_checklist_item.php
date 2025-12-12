@@ -157,6 +157,8 @@ try {
     // 8) Commit and Success
     // ---------------------------------------------------------------
     $conn->commit();
+    // Log the delete action
+    log_activity($conn, 'DELETE_CHECKLIST_ITEM', "Deleted checklist item ID: $id from project ID: $project_id, unit ID: $unit_id");
     http_response_code(204);
     exit;
 

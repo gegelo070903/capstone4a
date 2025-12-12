@@ -91,6 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     );
 
     if ($stmt->execute()) {
+        // Log the edit action
+        log_activity($conn, 'EDIT_MATERIAL', "Edited material: $name (ID: $id) in project ID: $project_id - Qty: $final_total_quantity_db, Unit: $unit");
         // 🎯 UPDATED REDIRECT to include &tab=materials
         header("Location: ../modules/view_project.php?id=$project_id&tab=materials");
         exit;

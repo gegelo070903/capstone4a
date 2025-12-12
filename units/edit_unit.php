@@ -22,6 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $stmt->bind_param("ssii", $name, $description, $unit_id, $project_id);
   $stmt->execute();
   $stmt->close();
+  
+  // Log the edit action
+  log_activity($conn, 'EDIT_UNIT', "Edited unit: $name (ID: $unit_id) in project ID: $project_id");
 
   header("Location: ../modules/view_project.php?id=$project_id");
   exit;

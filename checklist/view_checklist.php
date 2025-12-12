@@ -496,16 +496,16 @@ function removeSingleImage() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('✅ ' + data.message);
+            showToast(data.message, 'success');
             closeSingleImage();
             loadImages(checklistId); // Reload gallery
             reloadChecklist(); // Reload table to update count
         } else {
-            alert('❌ Removal Failed: ' + data.message);
+            showToast('Removal Failed: ' + data.message, 'error');
         }
     })
     .catch(err => {
-        alert('❌ An unexpected network error occurred.');
+        showToast('An unexpected network error occurred.', 'error');
         console.error('Removal Error:', err);
     });
 }
@@ -529,15 +529,15 @@ function removeAllImages() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('✅ ' + data.message);
+            showToast(data.message, 'success');
             toggleViewOverlay(false);
             reloadChecklist();
         } else {
-            alert('❌ Removal Failed: ' + data.message);
+            showToast('Removal Failed: ' + data.message, 'error');
         }
     })
     .catch(err => {
-        alert('❌ An unexpected network error occurred.');
+        showToast('An unexpected network error occurred.', 'error');
         console.error('Removal Error:', err);
     });
 }
@@ -584,7 +584,7 @@ document.getElementById('uploadImageForm').addEventListener('submit', function(e
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('✅ Image uploaded successfully!');
+                showToast('Image uploaded successfully!', 'success');
                 toggleUploadOverlay(false);
                 reloadChecklist();
                 // Reopen gallery if we came from there

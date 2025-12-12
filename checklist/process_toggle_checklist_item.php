@@ -123,6 +123,9 @@ try {
 
     // --- Commit and Redirect ---
     $conn->commit();
+    // Log the toggle action
+    $status_text = $new_status ? 'completed' : 'uncompleted';
+    log_activity($conn, 'TOGGLE_CHECKLIST_ITEM', "Marked checklist item ID: $item_id as $status_text (Project ID: $project_id, Unit ID: $unit_id)");
     // Redirect back to the view checklist page or project view
     header("Location: ../modules/view_project.php?id=$project_id&tab=units&status=checklist_item_updated_success");
     exit();

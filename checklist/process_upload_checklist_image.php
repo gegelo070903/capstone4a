@@ -70,6 +70,7 @@ if ($action === 'remove') {
         }
 
         $conn->commit();
+        log_activity($conn, 'REMOVE_CHECKLIST_IMAGE', "Removed checklist proof image (Image ID: $image_id, Checklist ID: $checklist_id)");
         respond_json(true, 'Image removed successfully!');
 
     } catch (Exception $e) {
@@ -113,6 +114,7 @@ if ($action === 'remove_all') {
         }
 
         $conn->commit();
+        log_activity($conn, 'REMOVE_CHECKLIST_IMAGES', "Removed all checklist proof images (Checklist ID: $checklist_id)");
         respond_json(true, 'All images removed successfully!');
 
     } catch (Exception $e) {
@@ -175,6 +177,7 @@ $stmt->bind_param("is", $checklist_id, $file_name);
 
 if ($stmt->execute()) {
     $new_image_id = $conn->insert_id;
+    log_activity($conn, 'UPLOAD_CHECKLIST_IMAGE', "Uploaded checklist proof image (Image ID: $new_image_id, Checklist ID: $checklist_id)");
     respond_json(true, 'Image uploaded successfully!', ['image_id' => $new_image_id, 'image_path' => $file_name]);
 } else {
     error_log('DB execute failed: ' . $stmt->error);

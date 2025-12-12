@@ -5,11 +5,73 @@
 
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../includes/header.php';
-require_login();
+
+// Start session if not started (for require_login check before header)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check login before any processing
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../auth/login.php');
+    exit();
+}
 
 $user_role = $_SESSION['user_role'] ?? 'constructor';
 date_default_timezone_set('Asia/Manila');
+
+// ============================================================
+// PROCESS ALL REDIRECTS BEFORE INCLUDING HEADER (no HTML output yet)
+// ============================================================
+
+// ✅ Restore Project
+if (isset($_GET['restore'])) {
+    $id = intval($_GET['restore']);
+    
+    // Get project name for logging
+    $proj_stmt = $conn->prepare("SELECT name FROM projects WHERE id = ?");
+    $proj_stmt->bind_param("i", $id);
+    $proj_stmt->execute();
+    $proj_name = $proj_stmt->get_result()->fetch_assoc()['name'] ?? 'Unknown';
+    $proj_stmt->close();
+    
+    // When restoring, set a default non-archived status, e.g., 'Ongoing' (adjust if needed)
+    $stmt = $conn->prepare("UPDATE projects SET is_deleted = 0, deleted_at = NULL, status = 'Ongoing' WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->close();
+    
+    log_activity($conn, 'RESTORE_PROJECT', "Restored project: $proj_name (ID: $id) from Archive");
+    header("Location: projects.php?status=success&message=" . urlencode("Project restored successfully with status: Ongoing!"));
+    exit;
+}
+
+// ✅ Permanent Delete
+if (isset($_GET['delete_perm'])) {
+    $id = intval($_GET['delete_perm']);
+    
+    // Get project name for logging
+    $proj_stmt = $conn->prepare("SELECT name FROM projects WHERE id = ?");
+    $proj_stmt->bind_param("i", $id);
+    $proj_stmt->execute();
+    $proj_name = $proj_stmt->get_result()->fetch_assoc()['name'] ?? 'Unknown';
+    $proj_stmt->close();
+    
+    $conn->begin_transaction();
+
+    try {
+        $conn->prepare("DELETE FROM project_units WHERE project_id = $id")->execute();
+        $conn->prepare("DELETE FROM projects WHERE id = $id")->execute();
+        $conn->commit();
+        log_activity($conn, 'DELETE_PROJECT', "Permanently deleted project: $proj_name (ID: $id)");
+        header("Location: projects.php?archived=1&status=success&message=" . urlencode("Project permanently deleted."));
+        exit;
+    } catch (Exception $e) {
+        $conn->rollback();
+        header("Location: projects.php?archived=1&status=error&message=" . urlencode("Failed to permanently delete: " . $e->getMessage()));
+        exit;
+    }
+}
 
 // ✅ Add Project - MODIFIED: Status is now automatically set to 'Pending'
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_project'])) {
@@ -18,8 +80,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_project'])) {
     $units = intval($_POST['units']);
     $status = 'Pending'; // ✅ AUTOMATED: Hardcode initial status to 'Pending'
 
-    if (empty($project_name) || empty($project_location) || $units <= 0) { // MODIFIED validation
-        echo "<script>alert('⚠️ Please fill in all required fields (Project Name, Location, Units).');</script>";
+    if (empty($project_name) || empty($project_location) || $units <= 0) {
+        // Store error in session to display after redirect
+        $_SESSION['toast_message'] = 'Please fill in all required fields (Project Name, Location, Units).';
+        $_SESSION['toast_type'] = 'warning';
+        header("Location: projects.php");
+        exit;
     } else {
         $stmt = $conn->prepare("INSERT INTO projects (name, location, units, status, created_at) VALUES (?, ?, ?, ?, NOW())");
         $stmt->bind_param("ssis", $project_name, $project_location, $units, $status);
@@ -36,9 +102,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_project'])) {
             }
             $unit_stmt->close();
 
-            echo "<script>alert('✅ Project added successfully with status: Pending!'); window.location.href='projects.php';</script>";
+            // Log the activity
+            log_activity($conn, 'ADD_PROJECT', "Created project: $project_name (Location: $project_location, Units: $units, ID: $project_id)");
+
+            header("Location: projects.php?status=success&message=" . urlencode("Project added successfully with status: Pending!"));
+            exit;
         } else {
-            echo "<script>alert('❌ Error adding project: " . addslashes($stmt->error) . "');</script>";
+            $_SESSION['toast_message'] = 'Error adding project: ' . $stmt->error;
+            $_SESSION['toast_type'] = 'error';
+            header("Location: projects.php");
+            exit;
         }
     }
 }
@@ -46,13 +119,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_project'])) {
 // ✅ NEW: Confirm Project (Pending -> Ongoing)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_project'])) {
     $id = intval($_POST['project_id']);
+    
+    // Get project name for logging
+    $proj_stmt = $conn->prepare("SELECT name FROM projects WHERE id = ?");
+    $proj_stmt->bind_param("i", $id);
+    $proj_stmt->execute();
+    $proj_name = $proj_stmt->get_result()->fetch_assoc()['name'] ?? 'Unknown';
+    $proj_stmt->close();
+    
     // Only update if current status is 'Pending'
     $stmt = $conn->prepare("UPDATE projects SET status = 'Ongoing' WHERE id = ? AND status = 'Pending'");
     $stmt->bind_param("i", $id);
     if ($stmt->execute() && $stmt->affected_rows > 0) {
-        echo "<script>alert('✅ Project confirmed and status set to Ongoing!'); window.location.href='projects.php';</script>";
+        log_activity($conn, 'CONFIRM_PROJECT', "Confirmed project: $proj_name (ID: $id) - Status changed to Ongoing");
+        header("Location: projects.php?status=success&message=" . urlencode("Project confirmed and status set to Ongoing!"));
     } else {
-        echo "<script>alert('❌ Error confirming project or status was not Pending.'); window.location.href='projects.php';</script>";
+        header("Location: projects.php?status=error&message=" . urlencode("Error confirming project or status was not Pending."));
     }
     $stmt->close();
     exit;
@@ -61,45 +143,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_project'])) {
 // ✅ NEW: Cancel Project (Pending -> Cancelled/Archive)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_project'])) {
     $id = intval($_POST['project_id']);
+    
+    // Get project name for logging
+    $proj_stmt = $conn->prepare("SELECT name FROM projects WHERE id = ?");
+    $proj_stmt->bind_param("i", $id);
+    $proj_stmt->execute();
+    $proj_name = $proj_stmt->get_result()->fetch_assoc()['name'] ?? 'Unknown';
+    $proj_stmt->close();
+    
     // Archive the project AND set status to 'Cancelled'
     $stmt = $conn->prepare("UPDATE projects SET is_deleted = 1, deleted_at = NOW(), status = 'Cancelled' WHERE id = ? AND status = 'Pending'");
     $stmt->bind_param("i", $id);
     if ($stmt->execute() && $stmt->affected_rows > 0) {
-        echo "<script>alert('✅ Project cancelled and moved to Archive.'); window.location.href='projects.php';</script>";
+        log_activity($conn, 'CANCEL_PROJECT', "Cancelled project: $proj_name (ID: $id) - Moved to Archive");
+        header("Location: projects.php?status=success&message=" . urlencode("Project cancelled and moved to Archive."));
     } else {
-        echo "<script>alert('❌ Error cancelling project or status was not Pending.'); window.location.href='projects.php';</script>";
+        header("Location: projects.php?status=error&message=" . urlencode("Error cancelling project or status was not Pending."));
     }
     $stmt->close();
     exit;
 }
 
-// ✅ Restore Project
-if (isset($_GET['restore'])) {
-    $id = intval($_GET['restore']);
-    // When restoring, set a default non-archived status, e.g., 'Ongoing' (adjust if needed)
-    $stmt = $conn->prepare("UPDATE projects SET is_deleted = 0, deleted_at = NULL, status = 'Ongoing' WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $stmt->close();
-    echo "<script>alert('✅ Project restored successfully with status: Ongoing!'); window.location.href='projects.php';</script>";
-    exit;
-}
+// ============================================================
+// NOW INCLUDE HEADER (HTML output starts here)
+// ============================================================
+require_once __DIR__ . '/../includes/header.php';
 
-// ✅ Permanent Delete
-if (isset($_GET['delete_perm'])) {
-    $id = intval($_GET['delete_perm']);
-    $conn->begin_transaction();
-
-    try {
-        $conn->prepare("DELETE FROM project_units WHERE project_id = $id")->execute();
-        $conn->prepare("DELETE FROM projects WHERE id = $id")->execute();
-        $conn->commit();
-        echo "<script>alert('🗑️ Project permanently deleted.'); window.location.href='projects.php?archived=1';</script>";
-        exit;
-    } catch (Exception $e) {
-        $conn->rollback();
-        echo "<script>alert('❌ Failed to permanently delete: " . addslashes($e->getMessage()) . "');</script>";
-    }
+// Check for session-based toast messages
+if (isset($_SESSION['toast_message'])) {
+    $toast_msg = $_SESSION['toast_message'];
+    $toast_type = $_SESSION['toast_type'] ?? 'info';
+    unset($_SESSION['toast_message'], $_SESSION['toast_type']);
+    echo "<script>document.addEventListener('DOMContentLoaded', function() { showToast(" . json_encode($toast_msg) . ", '$toast_type'); });</script>";
 }
 
 // ✅ View Mode
@@ -249,13 +324,15 @@ $projects = $stmt->get_result();
 .project-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 10px;
   margin-bottom: 8px;
 }
 .project-header h3 { /* Using h3 for project title in card */
   margin: 0;
   font-size: 18px;
   color: #1f2937;
+  flex: 1;
 }
 
 /* === Status Badge === */
@@ -266,12 +343,29 @@ $projects = $stmt->get_result();
   font-weight: 600;
   text-transform: capitalize;
   color: #fff;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 /* Re-map status classes for projects.php statuses (e.g., Pending, Ongoing, Completed) */
 .status.pending { background-color: var(--warn); }
 .status.ongoing { background-color: var(--brand-blue); }
 .status.completed { background-color: var(--ok); }
 .status.archived, .status.cancelled { background-color: #6b7280; } /* Added for archived/cancelled view */
+
+/* === Empty State === */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  grid-column: 1 / -1;
+}
+.empty-state .no-data {
+  color: #4b5563;
+  font-size: 16px;
+  margin: 0;
+}
 
 
 /* === Card Text === */
@@ -325,7 +419,7 @@ label {font-weight:600;color:#374151;font-size:14px;}
             <option value="oldest">Sort: Oldest</option>
             <option value="name">Sort: Name A–Z</option>
           </select>
-          <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+          <?php if (is_admin()): ?>
           <button class="btn-add" onclick="toggleOverlay(true)">+ Add Project</button>
           <?php endif; ?>
           <button class="btn-archive" onclick="window.location.href='projects.php?archived=1'">View Archived</button>
@@ -357,7 +451,7 @@ label {font-weight:600;color:#374151;font-size:14px;}
             <p><strong>Created:</strong> <?= date('M d, Y', strtotime($p['created_at'])) ?></p>
           </div>
 
-          <?php if ($user_role === 'admin'): ?>
+          <?php if (is_admin()): ?>
           <div style="margin-top:10px;" onclick="event.stopPropagation();">
             <?php if (!$showArchived): // Active Projects View ?>
               
@@ -380,7 +474,13 @@ label {font-weight:600;color:#374151;font-size:14px;}
         </div>
       <?php endwhile; ?>
     <?php else: ?>
-      <p class="no-data">No <?= $showArchived ? 'archived' : 'active' ?> projects found.</p>
+      <div class="empty-state">
+        <i class="fa-solid fa-folder-open" style="font-size: 48px; color: #9ca3af; margin-bottom: 15px;"></i>
+        <p class="no-data">No <?= $showArchived ? 'archived' : 'active' ?> projects found.</p>
+        <?php if ($showArchived): ?>
+        <p style="color: #6b7280; margin-top: 10px;">Archived projects will appear here when you archive them from the active projects list.</p>
+        <?php endif; ?>
+      </div>
     <?php endif; ?>
   </div>
 </div>
@@ -472,7 +572,7 @@ function openEditModal(id){
   fetch(`../modules/get_project.php?id=${id}`)
   .then(res=>res.json())
   .then(data=>{
-    if(!data || !data.id){alert('❌ Project not found');return;}
+    if(!data || !data.id){showToast('Project not found', 'error');return;}
     document.getElementById('edit_project_id').value=data.id;
     document.getElementById('edit_project_name').value=data.name;
     document.getElementById('edit_project_location').value=data.location;
@@ -480,7 +580,7 @@ function openEditModal(id){
     document.getElementById('edit_status').value=data.status;
     toggleEditOverlay(true);
   })
-  .catch(()=>alert('Error fetching project data.'));
+  .catch(()=>showToast('Error fetching project data.', 'error'));
 }
 
 // ✅ Update Project
@@ -489,8 +589,8 @@ document.getElementById('editForm').addEventListener('submit',e=>{
   const formData=new FormData(e.target);
   fetch('../modules/edit_project.php',{method:'POST',body:formData})
   .then(r=>r.text())
-  .then(()=>{alert('✅ Project updated successfully!');location.reload();})
-  .catch(()=>alert('❌ Update failed.'));
+  .then(()=>{showToast('Project updated successfully!', 'success');setTimeout(()=>location.reload(), 1000);})
+  .catch(()=>showToast('Update failed.', 'error'));
 });
 
 // ✅ Persist Search + Sort

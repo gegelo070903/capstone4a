@@ -3,8 +3,8 @@ require_once '../includes/db.php';
 require_once '../includes/functions.php';
 require_login();
 
-// Only admins can access this page
-if (($_SESSION['user_role'] ?? '') !== 'admin') {
+// Only admins (including super_admin) can access this page
+if (!is_admin()) {
     header("Location: ../dashboard.php");
     exit;
 }
@@ -13,22 +13,34 @@ include '../includes/header.php';
 
 // Helper to determine role color class
 function get_role_class($role) {
+    if ($role === 'super_admin') return 'role-super-admin';
     if ($role === 'admin') return 'role-admin';
     return 'role-constructor';
 }
 
-// Fetch users for display
-$users = $conn->query("SELECT * FROM users ORDER BY id ASC");
+// Fetch users for display - Super Admin sees all, Admin sees only their own
+if (is_super_admin()) {
+    $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
+} else {
+    // Admin can only see their own account
+    $current_user_id = $_SESSION['user_id'];
+    $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+    $stmt->bind_param("i", $current_user_id);
+    $stmt->execute();
+    $users = $stmt->get_result();
+}
 ?>
 
 <div class="content-wrapper">
   <div class="content-container">
     <div class="page-header">
-      <h2>User Accounts</h2>
-      <!-- Custom Button Style -->
+      <h2><?= is_super_admin() ? 'User Accounts' : 'My Account' ?></h2>
+      <?php if (is_super_admin()): ?>
+      <!-- Only Super Admin can add new users -->
       <button class="btn-add" onclick="toggleAddOverlay(true)">
         <i class="fa-solid fa-user-plus"></i> Add New User
       </button>
+      <?php endif; ?>
     </div>
 
     <!-- Alert Container -->
@@ -40,9 +52,10 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
           <thead>
             <tr>
               <th style="width: 5%">#</th>
-              <th style="width: 40%">Username</th>
-              <th style="width: 25%">Role</th>
-              <th style="width: 20%; text-align: right;">Actions</th>
+              <th style="width: 25%">Username</th>
+              <th style="width: 25%">Display Name</th>
+              <th style="width: 20%">Role</th>
+              <th style="width: 15%; text-align: right;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -53,22 +66,26 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
               <tr data-id="<?= $row['id']; ?>">
                 <td><?= htmlspecialchars($row['id']); ?></td>
                 <td><?= htmlspecialchars($row['username']); ?></td>
+                <td><?= htmlspecialchars($row['display_name'] ?? $row['username']); ?></td>
                 <td>
                   <span class="role-badge <?= get_role_class($row['role']); ?>">
-                    <?= $row['role'] === 'constructor' ? 'Employee' : htmlspecialchars(ucfirst($row['role'])); ?>
+                    <?= $row['role'] === 'constructor' ? 'Employee' : ($row['role'] === 'super_admin' ? 'Super Admin' : htmlspecialchars(ucfirst($row['role']))); ?>
                   </span>
                 </td>
                 <td class="actions">
                   <button class="btn-icon btn-edit edit-btn" data-id="<?= $row['id']; ?>" title="Edit">
                     <i class="fas fa-edit"></i>
                   </button>
+                  <?php if (is_super_admin() && $row['id'] != 1): ?>
+                  <!-- Only Super Admin can delete, and cannot delete the owner account -->
                   <button class="btn-icon btn-delete delete-btn" data-id="<?= $row['id']; ?>" title="Delete">
                     <i class="fas fa-trash-alt"></i>
                   </button>
+                  <?php endif; ?>
                 </td>
               </tr>
             <?php endwhile; else: ?>
-              <tr><td colspan="4" class="empty">No users found.</td></tr>
+              <tr><td colspan="5" class="empty">No users found.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>
@@ -93,6 +110,10 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
         <div class="form-group">
           <label class="form-label">Username</label>
           <input type="text" class="form-control" name="username" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input type="text" class="form-control" name="display_name" placeholder="Name shown in sidebar">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
@@ -128,22 +149,32 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
     <div class="overlay-body">
       <form id="editUserForm">
         <input type="hidden" name="id" id="editUserId">
+        <input type="hidden" name="current_role" id="editCurrentRole">
         <div class="form-group">
           <label class="form-label">Username</label>
           <input type="text" class="form-control" name="username" id="editUsername" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input type="text" class="form-control" name="display_name" id="editDisplayName" placeholder="Name shown in sidebar">
         </div>
         <div class="form-group">
           <label class="form-label">New Password</label>
           <input type="password" class="form-control" name="password" placeholder="Leave blank to keep current">
           <small class="form-text-helper">Leave blank to keep current password.</small>
         </div>
-        <div class="form-group">
+        <?php if (is_super_admin()): ?>
+        <div class="form-group" id="roleGroup">
           <label class="form-label">Role</label>
           <select name="role" id="editRole" class="form-select" required>
             <option value="admin">Admin</option>
             <option value="constructor">Employee</option>
           </select>
+          <small class="form-text-helper" id="roleLockedMsg" style="display:none; color:#7c3aed;">This is the owner account. Role cannot be changed.</small>
         </div>
+        <?php else: ?>
+        <input type="hidden" name="role" id="editRole">
+        <?php endif; ?>
         <div class="form-actions-modal">
           <button type="button" class="btn-cancel-modal" onclick="toggleEditOverlay(false)">Cancel</button>
           <button type="submit" class="btn-primary-modal btn-warning-submit">Update</button>
@@ -152,7 +183,6 @@ $users = $conn->query("SELECT * FROM users ORDER BY id ASC");
     </div>
   </div>
 </div>
-
 
 <!-- Overlay Toast Notification -->
 <div id="overlay-toast" class="overlay-toast"></div>
@@ -179,6 +209,12 @@ function toggleEditOverlay(show) {
 
 
 const processURL = "process_user.php";
+
+// Helper function to show error messages
+function showError(err) {
+    console.error('Error:', err);
+    showToast(err.message || 'An error occurred', 'error');
+}
 
 // Helper function to process the raw fetch response
 function processRawResponse(response) {
@@ -214,9 +250,29 @@ document.querySelectorAll('.edit-btn').forEach(btn => {
     fetch(`${processURL}?action=get&id=${id}`)
       .then(processRawResponse) 
       .then(user => {
+        if (user.error) {
+          showToast(user.error, 'error');
+          return;
+        }
         document.getElementById('editUserId').value = user.id;
         document.getElementById('editUsername').value = user.username;
+        document.getElementById('editDisplayName').value = user.display_name || '';
+        document.getElementById('editCurrentRole').value = user.role;
         document.getElementById('editRole').value = user.role;
+        
+        // Lock role for super_admin (user ID 1)
+        const roleSelect = document.getElementById('editRole');
+        const roleLockedMsg = document.getElementById('roleLockedMsg');
+        if (roleSelect && roleLockedMsg) {
+          if (user.id == 1 || user.role === 'super_admin') {
+            roleSelect.disabled = true;
+            roleLockedMsg.style.display = 'block';
+          } else {
+            roleSelect.disabled = false;
+            roleLockedMsg.style.display = 'none';
+          }
+        }
+        
         toggleEditOverlay(true); 
       })
       .catch(err => showError(err));
@@ -262,11 +318,32 @@ function attachRowEvents(row) {
       fetch(`${processURL}?action=get&id=${id}`)
         .then(processRawResponse) 
         .then(user => {
+          if (user.error) {
+            showToast(user.error, 'error');
+            return;
+          }
           document.getElementById('editUserId').value = user.id;
           document.getElementById('editUsername').value = user.username;
+          document.getElementById('editDisplayName').value = user.display_name || '';
+          document.getElementById('editCurrentRole').value = user.role;
           document.getElementById('editRole').value = user.role;
+          
+          // Lock role for super_admin (user ID 1)
+          const roleSelect = document.getElementById('editRole');
+          const roleLockedMsg = document.getElementById('roleLockedMsg');
+          if (roleSelect && roleLockedMsg) {
+            if (user.id == 1 || user.role === 'super_admin') {
+              roleSelect.disabled = true;
+              roleLockedMsg.style.display = 'block';
+            } else {
+              roleSelect.disabled = false;
+              roleLockedMsg.style.display = 'none';
+            }
+          }
+          
           toggleEditOverlay(true);
-        });
+        })
+        .catch(err => showError(err));
     });
   }
 
@@ -288,14 +365,17 @@ function attachRowEvents(row) {
 function addUserRow(user) {
   const tbody = document.querySelector('#usersTable tbody');
   const newRow = document.createElement('tr');
-  const roleDisplay = user.role === 'constructor' ? 'Employee' : user.role.charAt(0).toUpperCase() + user.role.slice(1);
+  const roleDisplay = user.role === 'constructor' ? 'Employee' : (user.role === 'super_admin' ? 'Super Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1));
+  const roleClass = user.role === 'super_admin' ? 'role-super-admin' : (user.role === 'admin' ? 'role-admin' : 'role-constructor');
+  const displayName = user.display_name || user.username;
 
   newRow.setAttribute('data-id', user.id);
   newRow.innerHTML = `
     <td>${user.id}</td>
     <td>${user.username}</td>
+    <td>${displayName}</td>
     <td>
-      <span class="role-badge ${user.role === 'admin' ? 'role-admin' : 'role-constructor'}">
+      <span class="role-badge ${roleClass}">
         ${roleDisplay}
       </span>
     </td>
@@ -320,15 +400,20 @@ function addUserRow(user) {
 function updateUserRow(user) {
   const row = document.querySelector(`#usersTable tr[data-id="${user.id}"]`);
   if (!row) return;
-  const roleDisplay = user.role === 'constructor' ? 'Employee' : user.role.charAt(0).toUpperCase() + user.role.slice(1);
+  const roleDisplay = user.role === 'constructor' ? 'Employee' : (user.role === 'super_admin' ? 'Super Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1));
+  const roleClass = user.role === 'super_admin' ? 'role-super-admin' : (user.role === 'admin' ? 'role-admin' : 'role-constructor');
+  const displayName = user.display_name || user.username;
   
   // Update username cell
   row.querySelector('td:nth-child(2)').textContent = user.username;
   
+  // Update display name cell
+  row.querySelector('td:nth-child(3)').textContent = displayName;
+  
   // Update role badge
   const badge = row.querySelector('.role-badge');
   badge.textContent = roleDisplay;
-  badge.className = `role-badge ${user.role === 'admin' ? 'role-admin' : 'role-constructor'}`;
+  badge.className = `role-badge ${roleClass}`;
 }
 
 function removeUserRow(id) {
@@ -339,7 +424,7 @@ function removeUserRow(id) {
   const tbody = document.querySelector('#usersTable tbody');
   if (tbody.children.length === 0) {
       const emptyRow = document.createElement('tr');
-      emptyRow.innerHTML = `<td colspan="4" class="empty">No users found.</td>`;
+      emptyRow.innerHTML = `<td colspan="5" class="empty">No users found.</td>`;
       tbody.appendChild(emptyRow);
   }
 }
@@ -351,7 +436,7 @@ function handleResponse(data, actionIdentifier = null) {
   if (actionIdentifier === 'edit') toggleEditOverlay(false);
 
   // Show overlay message
-  showOverlayToast(data.message, data.status === 'success' ? 'success' : 'danger');
+  showToast(data.message, data.status === 'success' ? 'success' : 'error');
 
   // DYNAMIC TABLE UPDATE LOGIC
   if (data.status === 'success') {
@@ -361,14 +446,6 @@ function handleResponse(data, actionIdentifier = null) {
     
     // NOTE: location.reload() is removed
   }
-}
-
-function showOverlayToast(message, type = 'success') {
-  const toast = document.getElementById('overlay-toast');
-  toast.textContent = message;
-
-  toast.className = `overlay-toast show ${type}`;
-  setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
 // Initial event attachment for existing rows (on DOM load)
@@ -617,6 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
     font-weight: 600;
     white-space: nowrap; /* Prevent badge text from wrapping */
 }
+.role-super-admin { background-color: #7c3aed; color: var(--color-white); } /* Purple background for Super Admin */
 .role-admin { background-color: var(--brand-blue); color: var(--color-white); } /* Blue background for Admin */
 
 
