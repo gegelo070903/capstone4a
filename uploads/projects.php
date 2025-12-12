@@ -17,7 +17,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$user_role = $_SESSION['user_role'] ?? 'constructor';
+$user_role = $_SESSION['user_role'] ?? 'admin';
 date_default_timezone_set('Asia/Manila');
 
 // ============================================================

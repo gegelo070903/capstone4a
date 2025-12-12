@@ -67,7 +67,7 @@ function current_user_id(): ?int {
 
 // ---------------------------------------------------------------
 // PROJECT ACCESS AUTHORIZATION
-// Restricts constructors to their assigned projects only.
+// Restricts admins to their assigned projects only.
 // ---------------------------------------------------------------
 function authorize_project_access(mysqli $conn, int $project_id): void {
     ensure_session_started();
@@ -85,7 +85,7 @@ function authorize_project_access(mysqli $conn, int $project_id): void {
         exit('Invalid request.');
     }
 
-    // Check if project belongs to the constructor
+    // Check if project belongs to the admin
     $stmt = $conn->prepare('SELECT id FROM projects WHERE id = ? AND assigned_to = ? LIMIT 1');
     if (!$stmt) {
         error_log('authorize_project_access() prepare failed: ' . $conn->error);

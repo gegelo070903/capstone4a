@@ -26,7 +26,7 @@ switch ($action) {
     $username = trim($_POST['username'] ?? '');
     $display_name = trim($_POST['display_name'] ?? '');
     $password = trim($_POST['password'] ?? '');
-    $role = $_POST['role'] ?? 'constructor';
+    $role = $_POST['role'] ?? 'admin';
 
     if (empty($username) || empty($password)) {
       echo json_encode(['status' => 'danger', 'message' => 'Username and password are required']);
@@ -97,7 +97,7 @@ switch ($action) {
     
     $username = trim($_POST['username'] ?? '');
     $display_name = trim($_POST['display_name'] ?? '');
-    $role = $_POST['role'] ?? 'constructor';
+    $role = $_POST['role'] ?? 'admin';
     $current_role = $_POST['current_role'] ?? '';
     $password = !empty($_POST['password']) ? password_hash($_POST['password'], PASSWORD_DEFAULT) : null;
     

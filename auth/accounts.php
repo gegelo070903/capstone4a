@@ -14,8 +14,7 @@ include '../includes/header.php';
 // Helper to determine role color class
 function get_role_class($role) {
     if ($role === 'super_admin') return 'role-super-admin';
-    if ($role === 'admin') return 'role-admin';
-    return 'role-constructor';
+    return 'role-admin';
 }
 
 // Fetch users for display - Super Admin sees all, Admin sees only their own
@@ -69,7 +68,7 @@ if (is_super_admin()) {
                 <td><?= htmlspecialchars($row['display_name'] ?? $row['username']); ?></td>
                 <td>
                   <span class="role-badge <?= get_role_class($row['role']); ?>">
-                    <?= $row['role'] === 'constructor' ? 'Employee' : ($row['role'] === 'super_admin' ? 'Super Admin' : htmlspecialchars(ucfirst($row['role']))); ?>
+                    <?= $row['role'] === 'super_admin' ? 'Super Admin' : 'Admin'; ?>
                   </span>
                 </td>
                 <td class="actions">
@@ -121,10 +120,10 @@ if (is_super_admin()) {
         </div>
         <div class="form-group">
           <label class="form-label">Role</label>
-          <select name="role" class="form-select" required>
-            <option value="admin">Admin</option>
-            <option value="constructor">Employee</option>
-          </select>
+          <div class="role-display">
+            <span class="role-badge role-admin">Admin</span>
+          </div>
+          <input type="hidden" name="role" value="admin">
         </div>
         <div class="form-actions-modal">
           <button type="button" class="btn-cancel-modal" onclick="toggleAddOverlay(false)">Cancel</button>
@@ -166,10 +165,10 @@ if (is_super_admin()) {
         <?php if (is_super_admin()): ?>
         <div class="form-group" id="roleGroup">
           <label class="form-label">Role</label>
-          <select name="role" id="editRole" class="form-select" required>
-            <option value="admin">Admin</option>
-            <option value="constructor">Employee</option>
-          </select>
+          <div class="role-display">
+            <span class="role-badge" id="editRoleBadge">Admin</span>
+          </div>
+          <input type="hidden" name="role" id="editRole" value="admin">
           <small class="form-text-helper" id="roleLockedMsg" style="display:none; color:#7c3aed;">This is the owner account. Role cannot be changed.</small>
         </div>
         <?php else: ?>
@@ -260,16 +259,22 @@ document.querySelectorAll('.edit-btn').forEach(btn => {
         document.getElementById('editCurrentRole').value = user.role;
         document.getElementById('editRole').value = user.role;
         
-        // Lock role for super_admin (user ID 1)
-        const roleSelect = document.getElementById('editRole');
+        // Update role badge display and lock for super_admin (user ID 1)
+        const roleBadge = document.getElementById('editRoleBadge');
+        const roleInput = document.getElementById('editRole');
         const roleLockedMsg = document.getElementById('roleLockedMsg');
-        if (roleSelect && roleLockedMsg) {
+        
+        if (roleBadge) {
           if (user.id == 1 || user.role === 'super_admin') {
-            roleSelect.disabled = true;
-            roleLockedMsg.style.display = 'block';
+            roleBadge.textContent = 'Super Admin';
+            roleBadge.className = 'role-badge role-super-admin';
+            roleInput.value = 'super_admin';
+            if (roleLockedMsg) roleLockedMsg.style.display = 'block';
           } else {
-            roleSelect.disabled = false;
-            roleLockedMsg.style.display = 'none';
+            roleBadge.textContent = 'Admin';
+            roleBadge.className = 'role-badge role-admin';
+            roleInput.value = 'admin';
+            if (roleLockedMsg) roleLockedMsg.style.display = 'none';
           }
         }
         
@@ -365,8 +370,8 @@ function attachRowEvents(row) {
 function addUserRow(user) {
   const tbody = document.querySelector('#usersTable tbody');
   const newRow = document.createElement('tr');
-  const roleDisplay = user.role === 'constructor' ? 'Employee' : (user.role === 'super_admin' ? 'Super Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1));
-  const roleClass = user.role === 'super_admin' ? 'role-super-admin' : (user.role === 'admin' ? 'role-admin' : 'role-constructor');
+  const roleDisplay = user.role === 'super_admin' ? 'Super Admin' : 'Admin';
+  const roleClass = user.role === 'super_admin' ? 'role-super-admin' : 'role-admin';
   const displayName = user.display_name || user.username;
 
   newRow.setAttribute('data-id', user.id);
@@ -400,8 +405,8 @@ function addUserRow(user) {
 function updateUserRow(user) {
   const row = document.querySelector(`#usersTable tr[data-id="${user.id}"]`);
   if (!row) return;
-  const roleDisplay = user.role === 'constructor' ? 'Employee' : (user.role === 'super_admin' ? 'Super Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1));
-  const roleClass = user.role === 'super_admin' ? 'role-super-admin' : (user.role === 'admin' ? 'role-admin' : 'role-constructor');
+  const roleDisplay = user.role === 'super_admin' ? 'Super Admin' : 'Admin';
+  const roleClass = user.role === 'super_admin' ? 'role-super-admin' : 'role-admin';
   const displayName = user.display_name || user.username;
   
   // Update username cell
@@ -686,8 +691,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* FIX: Role Badge */
 .role-badge {
-    background-color: #e5e7eb; /* Light Gray background for constructor/default */
-    color: #374151; /* Dark text for light background */
+    background-color: #2563eb; /* Blue background for admin/default */
+    color: #fff; /* White text */
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 12px;
@@ -696,6 +701,15 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 .role-super-admin { background-color: #7c3aed; color: var(--color-white); } /* Purple background for Super Admin */
 .role-admin { background-color: var(--brand-blue); color: var(--color-white); } /* Blue background for Admin */
+
+/* Role display in forms */
+.role-display {
+    padding: 8px 0;
+}
+.role-display .role-badge {
+    padding: 6px 14px;
+    font-size: 14px;
+}
 
 
 /* === FORM LAYOUT & PADDING FIXES === */
