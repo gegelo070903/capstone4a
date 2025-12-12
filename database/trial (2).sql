@@ -406,40 +406,6 @@ INSERT INTO `report_material_usage` (`id`, `report_id`, `material_id`, `quantity
 (17, 16, 13, 2, '2025-12-10 15:12:13');
 
 -- --------------------------------------------------------
---
--- Table structure for table `deleted_projects`
--- Archive table for permanently deleted projects
---
-
-DROP TABLE IF EXISTS `deleted_projects`;
-CREATE TABLE `deleted_projects` (
-  `id` int(11) NOT NULL DEFAULT 0,
-  `name` varchar(255) NOT NULL,
-  `location` varchar(255) DEFAULT NULL,
-  `assigned_to` int(11) DEFAULT NULL,
-  `status` enum('Ongoing','Completed','Pending') NOT NULL DEFAULT 'Pending',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `folder_path` varchar(255) DEFAULT NULL,
-  `deleted_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
---
--- Table structure for table `deleted_project_units`
--- Archive table for permanently deleted project units
---
-
-DROP TABLE IF EXISTS `deleted_project_units`;
-CREATE TABLE `deleted_project_units` (
-  `id` int(11) NOT NULL DEFAULT 0,
-  `project_id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `description` text DEFAULT NULL,
-  `created_at` datetime DEFAULT current_timestamp(),
-  `deleted_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
 
 COMMIT;
 
