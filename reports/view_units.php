@@ -49,7 +49,7 @@ $result = $conn->query($query);
   <div class="header-container">
     <div class="reports-header">
       <div>
-        <h2><?= htmlspecialchars($project['name']) ?> — Units</h2>
+        <h2><?= htmlspecialchars($project['name']) ?> — Project/Units</h2>
         <p class="subtitle">Location: <?= htmlspecialchars($project['location']) ?></p>
       </div>
 

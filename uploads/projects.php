@@ -450,7 +450,7 @@ label {font-weight:600;color:#374151;font-size:14px;}
           </div>
           <div class="project-details">
             <p><strong>Location:</strong> <?= htmlspecialchars($p['location']) ?></p>
-            <p><strong>Units:</strong> <?= $p['units'] ?></p>
+            <p><strong>Project/Units:</strong> <?= $p['units'] ?></p>
             <p><strong>Created:</strong> <?= date('M d, Y', strtotime($p['created_at'])) ?></p>
           </div>
 
@@ -497,7 +497,7 @@ label {font-weight:600;color:#374151;font-size:14px;}
       <div class="form-grid">
         <div class="form-group"><label>Project Name</label><input type="text" name="project_name" required></div>
         <div class="form-group"><label>Location</label><input type="text" name="project_location" required></div>
-        <div class="form-group"><label>Units</label><input type="number" name="units" min="1" required></div>
+        <div class="form-group"><label>Project/Units</label><input type="number" name="units" min="1" required></div>
         <!-- Status field REMOVED: Status is now automatically set to 'Pending' in PHP -->
       </div>
       <div class="overlay-actions">
@@ -518,7 +518,7 @@ label {font-weight:600;color:#374151;font-size:14px;}
       <div class="form-grid">
         <div class="form-group"><label>Project Name</label><input type="text" id="edit_project_name" name="project_name" required></div>
         <div class="form-group"><label>Location</label><input type="text" id="edit_project_location" name="project_location" required></div>
-        <div class="form-group"><label>Units</label><input type="number" id="edit_units" name="units" min="1" required></div>
+        <div class="form-group"><label>Project/Units</label><input type="number" id="edit_units" name="units" min="1" required></div>
         <div class="form-group">
           <label>Status</label>
           <select id="edit_status" name="status" required>

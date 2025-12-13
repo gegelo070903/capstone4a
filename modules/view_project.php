@@ -194,7 +194,7 @@ include '../includes/header.php';
     <p><strong>Status:</strong> 
       <span class="status <?= strtolower($project['status']); ?>"><?= htmlspecialchars($project['status']); ?></span> |
       <strong>Location:</strong> <?= htmlspecialchars($project['location']); ?> |
-      <strong>Units:</strong> <?= $project['units']; ?> |
+      <strong>Project/Units:</strong> <?= $project['units']; ?> |
       <strong>Created:</strong> <?= date('M d, Y', strtotime($project['created_at'])); ?>
     </p>
 
