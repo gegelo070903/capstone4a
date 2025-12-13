@@ -39,9 +39,9 @@ INTRODUCTION
         The global construction industry is undergoing a technological revolution, driven by the increasing demand for efficiency, transparency, and sustainability in project management. With the rise of Industry 4.0, Building Information Modeling (BIM), and Internet of Things (IoT) integration, construction firms around the world are adopting digital systems to streamline workflows, enhance real-time collaboration, and reduce project delays and cost overruns (Zhao et al., 2021). These innovations are fundamentally reshaping how construction activities are monitored and controlled, allowing companies to gain a competitive edge through improved project delivery, enhanced stakeholder communication, and data-driven decision making. The digital transformation has proven particularly effective in addressing traditional construction challenges such as budget overruns, schedule delays, and quality control issues that have historically plagued the industry.
        In the ASEAN region, construction sectors in countries such as Singapore, Malaysia, and Thailand are also embracing digital transformation to address inefficiencies in traditional construction practices. Government-led initiatives like Singapore's Building and Construction Authority's (BCA) Construction Industry Transformation Map encourage the use of integrated digital delivery systems to improve project lifecycle management and promote sustainable construction practices. However, significant disparities still exist across member countries, especially among small and medium-sized enterprises (SMEs), where the adoption of modern monitoring systems remains slow due to high implementation costs, lack of technical expertise, and organizational resistance to change (ASEAN Development Outlook, 2023). This uneven adoption creates a technological divide that affects competitiveness and project outcomes across the region, with more advanced economies leading the digital transformation while developing markets struggle to keep pace.
           In the Philippines, the construction industry serves as a major contributor to national economic growth, generating substantial employment and supporting infrastructure development initiatives. Yet many firms continue to operate using manual, paper-based monitoring systems that limit their operational efficiency and growth potential. While large construction companies have begun adopting digital solutions and investing in modern project management technologies, a significant number of SMEs still rely on spreadsheets and physical logs for tracking project activities, material inventory, and workforce deployment. This outdated approach results in limited project visibility, poor resource allocation, delayed responses to emerging on-site issues, and difficulties in maintaining compliance with regulatory requirements (Philippine Statistics Authority, 2022). The gap between current practices and available technologies highlights the urgent need for practical, scalable digital solutions specifically tailored to the Philippine construction context and the unique challenges faced by local SMEs.
-          Sunshine Sapphire Construction and Supply, Inc., a growing SME in the Philippines, exemplifies the operational challenges commonly faced by local construction companies. At present, their construction development monitoring heavily depends on manual record-keeping using Excel spreadsheets. This approach makes it extremely difficult to manage multiple ongoing projects efficiently, ensure timely procurement and delivery of materials, and track workforce productivity across different job sites. The lack of real-time data, automation, and centralized tracking leads to frequent project delays, increased operational costs, and difficulties in maintaining quality and compliance. These challenges are further compounded by communication breakdowns among staff, delayed reporting, and poor coordination between project teams—factors that negatively affect overall project performance and client satisfaction.
+          Sunshine Sapphire Construction and Supply, Inc., a growing SME in the Philippines, exemplifies the operational challenges commonly faced by local construction companies. At present, their construction development monitoring heavily depends on manual record-keeping using Excel spreadsheets. This approach makes it extremely difficult to manage multiple ongoing projects efficiently, ensure timely procurement and delivery of materials, and track workforce productivity across different job sites. The lack of real-time data, automation, and centralized tracking leads to frequent project delays, increased operational costs, and difficulties in maintaining quality and compliance. These challenges are further compounded by communication breakdowns among staff, delayed reporting, and poor coordination between project teamsï¿½factors that negatively affect overall project performance and client satisfaction.
           The absence of an integrated monitoring system reveals a critical gap between outdated manual methods and the potential benefits of adopting a digital construction management platform. To address this, the proposed Supply and Construction Development Monitoring System aims to replace fragmented, Excel-based processes with a centralized, automated system that provides real-time data access, automated reporting, comprehensive inventory tracking, and systematic task management. Unlike the current setup that is manual, reactive, and error-prone, the proposed system is proactive, data-driven, and designed to enable better decision-making through real-time insights, instant alerts, and predictive analytics. This transition marks a strategic shift from traditional, reactive approaches to proactive project management and digital efficiency.
-          This study is grounded in the goal of enhancing operational efficiency and promoting digital transformation among SMEs in the Philippine construction industry. By developing a customized monitoring system for Sunshine Sapphire Construction and Supply, Inc., the study not only addresses the company’s internal operational inefficiencies but also contributes to a broader understanding of how digital tools can transform project management practices in similar contexts. The successful implementation of the system is expected to boost productivity, minimize delays, strengthen quality control, and support the company’s long-term growth and competitiveness in an increasingly digital construction environment. Additionally, the research findings aim to provide valuable insights for other SMEs seeking to modernize their operations and embrace digital solutions in the Philippine construction sector.
+          This study is grounded in the goal of enhancing operational efficiency and promoting digital transformation among SMEs in the Philippine construction industry. By developing a customized monitoring system for Sunshine Sapphire Construction and Supply, Inc., the study not only addresses the companyï¿½s internal operational inefficiencies but also contributes to a broader understanding of how digital tools can transform project management practices in similar contexts. The successful implementation of the system is expected to boost productivity, minimize delays, strengthen quality control, and support the companyï¿½s long-term growth and competitiveness in an increasingly digital construction environment. Additionally, the research findings aim to provide valuable insights for other SMEs seeking to modernize their operations and embrace digital solutions in the Philippine construction sector.
 Background of the Study
           The construction industry plays a vital role in economic development, contributing significantly to infrastructure growth and employment generation. Globally, the sector accounts for around 13% of GDP, and it is expected to reach a market value of USD 14 trillion by 2025 (McKinsey & Company, 2020). In the Philippines, construction companies face numerous challenges in managing projects efficiently, particularly in monitoring supply chains and development progress. These challenges are amplified by the increasing complexity of modern construction projects and the need for real-time data to support critical decision-making processes (Asian Development Bank, 2022).
           Sunshine Sapphire Construction and Supply, Inc., a domestic corporation registered with the Securities and Exchange Commission (SEC) on November 14, 2019, exemplifies the challenges faced by growing construction companies in the Philippines. Located at St. Mark Ave. Dona Juliana Subd., Brgy. Taculing, Bacolod City, Negros Occidental, the company has been operating for six years with a workforce of 12 employees. The company specializes in both private and government construction projects, including building construction and road development, serving diverse clients such as private companies, individuals, Local Government Units (LGUs), and the Department of Public Works and Highways (DPWH).
@@ -50,7 +50,7 @@ Background of the Study
           The company's core services include providing accurate cost estimation for construction projects and offering design services in both civil and structural engineering. Their primary goal is to engage in general construction services while maintaining high standards of quality and safety. However, the current monitoring system limitations create challenges in achieving these objectives effectively.
           Key performance indicators currently tracked by the company include on-time project completion rates and resource utilization. The company ensures quality and safety standards through partnerships with trusted suppliers, regular safety meetings and toolbox meetings, routine inspections, and maintaining the presence of Construction Safety Officers and First Aiders on project sites. Communication and coordination among project teams and stakeholders are currently managed through weekly meetings, email, and SMS/calls.
 
-          Improvements in the current project monitoring system are necessary to address growing inefficiencies and meet the increasing complexity of construction projects. Relying solely on manual spreadsheets limits the company's ability to make real-time, data-driven decisions, leading to delays in project completion and difficulty in identifying risks early. These inefficiencies can result in time wastage, miscommunication among team members, and cost overruns—consequences that could compromise the company’s reputation, client trust, and profitability. As the construction landscape becomes more competitive, these operational weaknesses could hinder Sunshine Sapphire’s ability to grow and win larger government and private contracts (World Bank, 2023).
+          Improvements in the current project monitoring system are necessary to address growing inefficiencies and meet the increasing complexity of construction projects. Relying solely on manual spreadsheets limits the company's ability to make real-time, data-driven decisions, leading to delays in project completion and difficulty in identifying risks early. These inefficiencies can result in time wastage, miscommunication among team members, and cost overrunsï¿½consequences that could compromise the companyï¿½s reputation, client trust, and profitability. As the construction landscape becomes more competitive, these operational weaknesses could hinder Sunshine Sapphireï¿½s ability to grow and win larger government and private contracts (World Bank, 2023).
           To address these challenges, a Supply and Construction Development Monitoring System is proposed as a tailored digital solution for Sunshine Sapphire Construction and Supply, Inc. This computerized system is designed to automate project tracking, manage supply chains efficiently, and provide real-time access to project data. By integrating modules for progress monitoring, material inventory, reporting, and team coordination, the system enhances decision-making and reduces the likelihood of delays or miscommunication. It aims to transform the current manual process into a streamlined, efficient, and data-driven approach, ultimately improving productivity, transparency, and project success rates.
 
 
@@ -69,14 +69,13 @@ General Objectives
       1.2. Generate reports
       1.3. User management module
 Scope and Limitations of the Study
-          This study focuses on developing a Supply and Construction Development Monitoring System specifically for Sunshine Sapphire Construction and Supply, Inc. It covers real-time project tracking, supply management, reporting, and safety monitoring for both private and government projects. However, the system is limited to the company’s current operations, 12-person workforce, existing Excel-based data, and available technology. It is designed for internal use and may require adjustments for other organizations or future company expansion. 
-
+          This study focuses on developing a Supply and Construction Development Monitoring System specifically for Sunshine Sapphire Construction and Supply, Inc. It covers real-time project tracking, supply management, reporting, and safety monitoring for both private and government projects. However, the system is limited to the companyï¿½s current operations, 12-person workforce, existing Excel-based data, and available technology. It is designed for internal use and may require adjustments for other organizations or future company expansion.
    Scope
-      This study focuses on developing a Supply and Construction Development Monitoring System for Sunshine Sapphire Construction and Supply, Inc. It aims to improve current Excel-based processes by providing real-time project monitoring, supply chain and inventory tracking, automated reporting, safety compliance, and communication tools. The system is designed to streamline construction operations both private and government, while integrating features like KPI tracking, and regulatory monitoring tailored to the company’s needs. The project will cover operations in Bacolod City and apply to all company departments, including engineering, admin, and on-site personnel. The system features a two-level user hierarchy: one Super Admin account for the company CEO, and multiple Admin accounts for employees. All Admin accounts are created and managed exclusively by the Super Admin.
+      This study focuses on developing a Supply and Construction Development Monitoring System for Sunshine Sapphire Construction and Supply, Inc. It aims to improve current Excel-based processes by providing real-time project monitoring, supply chain and inventory tracking, automated reporting, safety compliance, and communication tools. The system is designed to streamline construction operationsï¿½both private and governmentï¿½while integrating features like KPI tracking, early warning alerts, and regulatory monitoring tailored to the companyï¿½s needs. The project will cover operations in Bacolod City and apply to all company departments, including engineering, admin, and on-site personnel.
    Limitation of the Study
        This study focuses on developing a customized supply chain management and integrated monitoring system for Sunshine Sapphire Construction and Supply, Inc., aimed at addressing inefficiencies in their current operations. The company presently relies on a manual, Excel-based process for monitoring construction development, which makes it difficult to manage multiple projects, results in delayed reporting, and lacks automation and real-time data access. The proposed system introduces features such as real-time tracking, automated reporting, and intelligent notifications to streamline operations and improve decision-making.
-         However, the study is limited in several ways. While it lays the groundwork for digital transformation, it does not fully explore integration with existing business software such as accounting systems, supplier databases, or project management platforms. Many construction firms depend on such tools, and the lack of detailed compatibility analysis could pose challenges during system implementation. Furthermore, although the importance of employee adoption is acknowledged, the study does not develop in-depth training modules or change management strategies. Effective implementation requires staff buy-in and proper onboarding areas not fully addressed in this research.
-          Additionally, the study primarily focuses on the system’s initial development and short-term deployment within the constraints of a capstone project. It does not delve deeply into long-term system maintenance, technical support, or the regular updates needed to keep the system sustainable and scalable. These limitations highlight that, while the system offers meaningful improvements over manual Excel-based methods, further research and development will be necessary to ensure its full integration, long-term usability, and widespread adoption across the organization.
+         However, the study is limited in several ways. While it lays the groundwork for digital transformation, it does not fully explore integration with existing business software such as accounting systems, supplier databases, or project management platforms. Many construction firms depend on such tools, and the lack of detailed compatibility analysis could pose challenges during system implementation. Furthermore, although the importance of employee adoption is acknowledged, the study does not develop in-depth training modules or change management strategies. Effective implementation requires staff buy-in and proper onboardingï¿½areas not fully addressed in this research.
+          Additionally, the study primarily focuses on the systemï¿½s initial development and short-term deployment within the constraints of a capstone project. It does not delve deeply into long-term system maintenance, technical support, or the regular updates needed to keep the system sustainable and scalable. These limitations highlight that, while the system offers meaningful improvements over manual Excel-based methods, further research and development will be necessary to ensure its full integration, long-term usability, and widespread adoption across the organization.
   Significance of the Study
           The development of the Supply and Construction Development Monitoring System for Sunshine Sapphire Construction and Supply, Inc. holds significant value for various stakeholders and contributes to multiple areas of knowledge and practice.
 For Sunshine Sapphire Construction and Supply, Inc. The proposed system will provide substantial operational benefits by addressing the company's current challenges with Excel-based project management. The system will enhance operational efficiency by automating routine tasks, reducing manual errors that currently plague their documentation processes, and improving overall productivity through streamlined workflows. Real-time data access will significantly support better planning and decision-making processes, particularly important for a company managing both private and government projects with varying requirements and timelines.
@@ -92,31 +91,29 @@ For Software Developers and IT Professionals. The study offers valuable insights
  For Project Management Professionals. The study contributes to the project management body of knowledge by demonstrating how technology can enhance traditional project management practices in the construction industry. It provides insights into integrating key performance indicators tracking, early warning systems, and automated reporting into construction project management workflows.
        The research offers practical examples of how digital tools can support quality assurance, safety management, and stakeholder communication in construction projects, providing valuable lessons for project management professionals across various industries.
 
+
+
 Operational Definition of Terms
 The operational definitions provided herein are meant to make clear and consistent reference of terms throughout this study. These terms are defined regarding the specific application of the term within this proposed system and the hardware and construction supply industry. These operational definitions set a basis for the common understanding of various technical concepts, system components, and business processes rigorously relevant to the development and evaluation of the Supply and Construction Development Monitoring. These terms are defined as per their respective applicability to the design, analysis, and implementation framework of this study.
-Activity Log: A system-generated record of all user actions and system events, including timestamps, user identification, IP address, and action details. Accessible only to Super Admin for audit trail and accountability purposes.
-Admin: Standard user role with access to operational modules including project management, reports, checklist, and materials monitoring. Created and managed by the Super Admin.
 Automated Reporting: The system's capability to generate project reports, progress updates, and compliance documents automatically without manual intervention, using standardized templates and formats to ensure consistency and completeness.
  Construction Safety Officer: A certified professional responsible for ensuring safety protocols and procedures are followed on construction sites, conducting safety meetings and tool-box meetings, and maintaining overall site safety standards.
 Department of Public Works and Highways (DPWH): The government agency responsible for the planning, design, construction, and maintenance of infrastructure facilities in the Philippines, serving as one of Sunshine Sapphire's key government clients.
+Early Warning System: A system feature designed to identify potential project issues and problems before they become critical, supporting proactive project management and decision-making processes.
+First Aider: A trained individual present on construction sites who can provide immediate medical assistance in case of accidents or health emergencies, working in coordination with the Construction Safety Officer.
 Key Performance Indicators (KPIs) Measurable values that demonstrate how effectively the company is achieving key business objectives, specifically focusing on on-time project completion rates and resource utilization as identified by Sunshine Sapphire.
 Licensed Civil Engineer: A professional engineer licensed to practice civil engineering in the Philippines, responsible for structural and civil design services within the company's technical staff.
 Local Government Units (LGUs): Local government entities in the Philippines including municipal, city, and provincial governments that commission construction projects and serve as key clients for Sunshine Sapphire.
 Philippine Contractors Accreditation Board (PCAB): The government agency responsible for the registration and classification of construction contractors in the Philippines, requiring ongoing compliance from companies like Sunshine Sapphire.
 Professional Electrical Engineer: A licensed professional responsible for electrical systems design and implementation in construction projects, forming part of the company's technical staff.
 Professional Mechanical Engineer: A licensed professional responsible for mechanical systems design and implementation in construction projects, part of the company's technical staff.
-Progress Percentage: A numerical indicator representing the completion status of project or units, manually updated through daily reports and checklist completion.
 Project Management: The application of knowledge, skills, tools, and techniques to project activities to meet project requirements and objectives, currently managed through Excel-based systems at Sunshine Sapphire.
-Project Unit: An individual housing unit or section within a construction project, each tracked separately with its own progress percentage, checklist items, and daily reports.
-Proof Image: Photographic evidence uploaded to document completed checklist items or construction progress, stored in the system for verification and quality assurance.
 Real-time Data Monitoring: The continuous tracking and updating of project information, supply chain status, and resource allocation as events occur, addressing the company's current limitation of not having access to current, real-time data.
 Resource Utilization: The efficient use of human resources, materials, equipment, and financial resources in construction projects, currently tracked as one of the company's key performance indicators.
-Role-Based Access Control: A security approach that restricts system access based on user roles (Super Admin or Admin), ensuring users can only access features and data appropriate to their authorization level.
 Securities and Exchange Commission (SEC): The government agency responsible for regulating the securities market and corporations in the Philippines, where Sunshine Sapphire was registered on November 14, 2019.
-Soft Delete: A data management technique where project records are marked as deleted rather that permanently removed from the database, allowing for data recovery and maintaining audit trail integrity.
-Super Admin: The highest-level user role with full system access, limited to the company owner. Has exclusive privileges including user account management, activity log viewing, and all operational functions.
 Supply Chain Management: The management of the flow of goods and services from suppliers to the construction site, including inventory control and procurement processes, currently managed through Excel-based systems
 System Integration: The process of connecting different computing systems and software applications to act as a coordinated whole, replacing the current fragmented approach using separate Excel files and manual communication methods.
+Tool-box Meeting: Regular safety meetings conducted on construction sites to discuss safety procedures, potential hazards, and safety protocols with workers before beginning work activities.
+
 
 CHAPTER II
 
@@ -145,7 +142,7 @@ Philippines Construction Industry Databook Series - Market Size & Forecast by Va
 REVIEW RELATED SYSTEM
 
 Foreign:
-          According to Kim et al. (2025) in Sensors, their study presents an integrated smart construction monitoring system that combines point cloud data from 3D laser scanners with real-time IoT sensors and UWB indoor positioning technology to improve site safety and quality management, validated over 17 days at a residential site. The system accurately predicts concrete strength within 1-2 MPa and tracks worker movements with errors of approximately 0.8–1.4 meters.
+          According to Kim et al. (2025) in Sensors, their study presents an integrated smart construction monitoring system that combines point cloud data from 3D laser scanners with real-time IoT sensors and UWB indoor positioning technology to improve site safety and quality management, validated over 17 days at a residential site. The system accurately predicts concrete strength within 1-2 MPa and tracks worker movements with errors of approximately 0.8ï¿½1.4 meters.
           According to Radman et al. (2025) in Advanced Engineering Informatics, their research introduces the RealCONs framework, a data-driven approach that streamlines real-time construction project analysis through improved data integration and decision-making, validated across multiple case studies with metrics showing enhanced forecasting accuracy and reduced delays.
 
           According to the National Economic Council (2024) in Quadrennial Supply Chain Review, the U.S. emphasizes strengthening critical supply chains through domestic manufacturing, strategic industrial policies, and resilience investments, while addressing vulnerabilities caused by global disruptions, geopolitical tensions, and climate change to ensure economic security.
@@ -159,16 +156,28 @@ Local:
 
 SUMMARY AND SYNTHESIS
 
-RELATED SYSTEMFUNCTIONALITIESDEVELOPMENT SYSTEM
+RELATED SYSTEM
+FUNCTIONALITIES
+DEVELOPMENT SYSTEM
+
 Construction and Supply Monitoring System
-To keep track of building materials, make sure they arrive on time, and know how much is being used. This helps avoid waste and delays.A web-based platform that uses sensors to collect data, show progress with pictures, and update schedules so everyone knows what’s happening in real-time.
+
+To keep track of building materials, make sure they arrive on time, and know how much is being used. This helps avoid waste and delays.
+A web-based platform that uses sensors to collect data, show progress with pictures, and update schedules so everyone knows whatï¿½s happening in real-time.
+
 Project Progress and Material Tracking System
-
-To see how far the project has gone, check how materials are being used, and predict what will be needed next.
-A system that uses sensors and smart algorithms to monitor progress, store data, and help plan the next steps efficiently.
+
+
+To see how far the project has gone, check how materials are being used, and predict what will be needed next.
+
+A system that uses sensors and smart algorithms to monitor progress, store data, and help plan the next steps efficiently.
+
 Supply Chain and Construction Development System
-
-To make sure materials are ordered and delivered on time, reducing delays and saving money.A digital platform that tracks deliveries, uses GPS to find materials, and reports on supply status to keep the project moving smoothly.
+
+
+To make sure materials are ordered and delivered on time, reducing delays and saving money.
+A digital platform that tracks deliveries, uses GPS to find materials, and reports on supply status to keep the project moving smoothly.
+
 
 
 
@@ -186,41 +195,36 @@ System Development Method
 Figure 1. Agile Model
       The agile methodology will be implemented through the following phase:
 Requirements
-         In Agile, requirements are not gathered all at once but are continuously identified and refined throughout development. Instead of rigid documentation, requirements are broken down into user stories or backlog items that describe what the system should achieve from the user’s perspective. This makes the process flexible and ensures that the system always aligns with the users’ current needs.
+         In Agile, requirements are not gathered all at once but are continuously identified and refined throughout development. Instead of rigid documentation, requirements are broken down into user stories or backlog items that describe what the system should achieve from the userï¿½s perspective. This makes the process flexible and ensures that the system always aligns with the usersï¿½ current needs.
 Design
           The design phase in Agile is not fixed at the beginning but evolves with the project. The system is structured in a way that allows modifications as new requirements emerge. Agile design emphasizes simplicity and adaptability, ensuring that future changes or new features can be integrated without disrupting the entire system.
 Development
           Development in Agile is carried out in short, time-boxed cycles called sprints. Each sprint delivers a set of working features that can be tested and used immediately. This incremental approach ensures that progress is visible and functional software is consistently delivered, reducing risks of delays or failures at the end of the project.
-Testing
-          Testing is integrated into every sprint, ensuring that issues are identified and corrected early rather than waiting until the end of development. This continuous testing approach maintains system quality, prevents accumulation of bugs, and guarantees that each new feature works correctly with the existing functions.
-Deployment
-          In Agile, deployment happens frequently and incrementally. Instead of waiting for the entire system to be finished, completed features are deployed in stages. This allows users to start benefiting from the system early, while developers continue adding improvements and new functionalities in future sprints.
-Review
-          The review stage takes place at the end of each sprint. Developers, along with users, evaluate the work completed, provide feedback, and identify what can be improved. This process ensures that the system remains aligned with user expectations and that future sprints are more efficient and better focused.
 
+SUMMARY AND SYNTHESIS
 
+RELATED SYSTEM FUNCTIONALITIES AND DEVELOPMENT
 
-Operational Framework
-Figure 2 presents the framework of the study. It covers the input, process, output and outcomes of the study. 
+The review of related literature and systems highlights the growing importance of digital transformation, integrated monitoring, and supply chain management in the construction industry. While advanced technologies such as IoT, sensors, BIM, and AI are increasingly adopted in large-scale and international projects, the proposed system for Sunshine Sapphire Construction and Supply Management is designed to be practical and accessible for local use.
 
-In the input phase, the proponents conducted an interview with the owner of the selected company and observed how the manual inventory system with monitoring development is currently operated. In the process phase, proponents gather all requirements needed, design using sketch, prototyping and developing the system using programming software like HTML, CSS, PHP, JavaScript and other programming languages needed for the development of the system. In the output phase, as the result of previous phases proponents already have the actual system together with the designs and functions that are working.
+The system is a web-based platform that enables the company to:
+â€¢ Manage projects, including both building and road projects, with or without units.
+â€¢ Track project progress and completion status through daily reports and checklists.
+â€¢ Monitor material inventory, usage, and allocation for each project.
+â€¢ Maintain digital records of project activities, materials, and reports.
+â€¢ Generate PDF reports for documentation and compliance.
+â€¢ Support user roles (Super Admin/CEO and Admin/Employee) for secure and organized access.
 
-Figure 2. Operational Framework
+Unlike some of the reviewed systems, this implementation does not use IoT sensors, GPS, BIM, or AI. Instead, it relies on manual data entry and digital record-keeping to provide real-time visibility and accountability for project management and supply monitoring. The system draws inspiration from best practices in the literature, adapting them to the needs and resources of a local construction company.
 
-
-System Requirements Specification
-1.	Functional Requirements 
-         1.1	User Management & Authentication
-         1.2	Project Management
-         1.3	Supplies Monitoring
-         1.4	Construction Development Monitoring
+This approach ensures that Sunshine Sapphire can efficiently manage both building and road projects, reduce material wastage, improve project tracking, and enhance overall operational transparency without the complexity or cost of advanced automation technologies.
          1.5	Reporting & PDF Generation
          1.6	User Interface & Experience
 2.	Input Requirements
           2.1	Project Details
                                     Project Name (Text)
                                     Project Location (Text)
-                                    Project Status (‘Pending’, ‘Ongoing’, ‘Completed’)
+                                    Project Status (ï¿½Pendingï¿½, ï¿½Ongoingï¿½, ï¿½Completedï¿½)
                                     Assigned Contractor
          2.2	Material Details
          2.3	Daily Development Report Details
@@ -261,13 +265,12 @@ Data Analysis
                 The proposed Supply Monitoring with Construction Development Monitoring is highly data-driven, relying on structured entities and well-defined relationships to ensure the integrity and consistency of information across modules. The analysis of system data centers on identifying the key entities, their attributes, and the relationships that interconnect them.
 
 Entity Identification:
-Users – stores user account details, login credentials, and role assignments 
-(Admin, 1 Super admin).
-Projects – contains essential project information such as project title, location, number of units, duration, and status.
-Materials – manages the global inventory of construction materials, including material name, category, quantity, unit, and acquisition date.
-Construction Reports – records daily progress reports for each project, containing report date, status, remarks, proof images, and used materials during the creation of the progress.
-Report Material Usage – a junction entity that connects daily reports with the materials used, including quantities consumed and deduction status.
-Project Checklists – manages project milestones and task completion indicators for progress monitoring.
+Users ï¿½ stores user account details, login credentials, and role assignments (Administrator, Constructor).
+Projects ï¿½ contains essential project information such as project title, location, duration, assigned constructors, and status.
+Materials ï¿½ manages the global inventory of construction materials, including material name, category, quantity, unit, and acquisition date.
+Construction Reports ï¿½ records daily progress reports for each project, containing report date, status, description, proof images, and associated constructor.
+Report Material Usage ï¿½ a junction entity that connects daily reports with the materials used, including quantities consumed and deduction status.
+Project Checklists ï¿½ manages project milestones and task completion indicators for progress monitoring.
 
 Process Analysis
          The process analysis defines how data flows across modules and how the system supports user interactions. It emphasizes the workflows required to complete major tasks, ensuring the system meets functional requirements.
@@ -276,17 +279,229 @@ Application Architecture
 Figure 3. Application Architecture
 Data Dictionary 
 User
-FIELD NAMEDESCRIPTIONTYPELENGTHIdUser Identificationint11UsernameLogin Namevarchar50PasswordHashed Passwordvarchar255RoleUser Role (‘admin’,’superadmin’)enumN/A
+FIELD NAME
+DESCRIPTION
+TYPE
+LENGTH
+Id
+User Identification
+int
+11
+Username
+Login Name
+varchar
+50
+Password
+Hashed Password
+varchar
+255
+Role
+User Role (ï¿½adminï¿½,ï¿½constructorï¿½)
+enum
+N/A
+
 Projects 
-FIELD NAMEDESCRIPTIONTYPELENGTHIdProject Identificationint11NameProject Namevarchar255LocationProject Locationvarchar255Constructor_idResponsible Constructor IDint11Status(‘ongoing’,’completed’,’pending’)enumN/ACreated_atCreation timestamptimestampN/AFolder_pathProject folder pathvarchar255 
+FIELD NAME
+DESCRIPTION
+TYPE
+LENGTH
+Id
+Project Identification
+int
+11
+Name
+Project Name
+varchar
+255
+Location
+Project Location
+varchar
+255
+Constructor_id
+Responsible Constructor ID
+int
+11
+Status
+(ï¿½ongoingï¿½,ï¿½completedï¿½,ï¿½pendingï¿½)
+enum
+N/A
+Created_at
+Creation timestamp
+timestamp
+N/A
+Folder_path
+Project folder path
+varchar
+255
+ 
 Construction Reports 
-FIELD NAMEDESCRIPTIONTYPESLENGTHIdIdentificationint11Project_idProject IDint11Constructor_idConstructor IDint11Report_dateDate of reportdateN/AStart_timeStart timeVarchar110End_timeEnd timevarchar10Status(‘complete’,’ongoing’)enumN/ADescriptionReport detailstextN/AProof_imageProof image pathvarchar255Materials_leftRemaining materialstextN/A
+FIELD NAME
+DESCRIPTION
+TYPES
+LENGTH
+Id
+Identification
+int
+11
+Project_id
+Project ID
+int
+11
+Constructor_id
+Constructor ID
+int
+11
+Report_date
+Date of report
+date
+N/A
+Start_time
+Start time
+Varchar1
+10
+End_time
+End time
+varchar
+10
+Status
+(ï¿½completeï¿½,ï¿½ongoingï¿½)
+enum
+N/A
+Description
+Report details
+text
+N/A
+Proof_image
+Proof image path
+varchar
+255
+Materials_left
+Remaining materials
+text
+N/A
+
 Project Checklist 
-FIELD NAMEDESCRIPTIONTYPELENGTHIdChecklist item identificationint11Project_idRelated projectsint111Item_descriptionItem detailsvarchar500Is_completedStatus (1 or 0)tinyint1Completed_by_user_idUser ID who completedint11Completed_atCompletion datetimedatetimeN/ACreated_atRecord creation timeTimestamp1N/A
+FIELD NAME
+DESCRIPTION
+TYPE
+LENGTH
+Id
+Checklist item identification
+int
+11
+Project_id
+Related projects
+int
+111
+Item_description
+Item details
+varchar
+500
+Is_completed
+Status (1 or 0)
+tinyint
+1
+Completed_by_user_id
+User ID who completed
+int
+11
+Completed_at
+Completion datetime
+datetime
+N/A
+Created_at
+Record creation time
+Timestamp1
+N/A
+
 Report Material Usage 
-FIELD NAMEDESCRIPTIONTYPELENGTHIdUsage record IDint11Report_idReport IDint11Material_idMaterial IDint11Quantity_usedQuantity useddecimal10,2Is_deductedDeducted statustinyint1dDeducted_atDeducted datedatetimeN/ADeducted_by_user_idUser who deductedintt11Created_atRecord timestamptimestampN/A 
+FIELD NAME
+DESCRIPTION
+TYPE
+LENGTH
+Id
+Usage record ID
+int
+11
+Report_id
+Report ID
+int
+11
+Material_id
+Material ID
+int
+11
+Quantity_used
+Quantity used
+decimal
+10,2
+Is_deducted
+Deducted status
+tinyint
+1d
+Deducted_at
+Deducted date
+datetime
+N/A
+Deducted_by_user_id
+User who deducted
+intt
+11
+Created_at
+Record timestamp
+timestamp
+N/A
+ 
 Materials 
-FIELD NAMEDECRIPTIONLENGTHTYPEId Material IDint11Project_idAssociated projectint11NameMaterial namevarchar100PricePrice per unit decimal10,2SupplierSupplier namevarchar100Date Acquisition datedateN/ATTimeAcquisition timevarchar10PurposeMaterial purposevarchar255QuantityQuantityint11Unit_of_measurementUnit (e.g.,kg)varchar50Total_amountTotal costdecimal10,2
+FIELD NAME
+DECRIPTION
+LENGTH
+TYPE
+Id 
+Material ID
+int
+11
+Project_id
+Associated project
+int
+11
+Name
+Material name
+varchar
+100
+Price
+Price per unit 
+decimal
+10,2
+Supplier
+Supplier name
+varchar
+100
+Date 
+Acquisition date
+date
+N/AT
+Time
+Acquisition time
+varchar
+10
+Purpose
+Material purpose
+varchar
+255
+Quantity
+Quantity
+int
+11
+Unit_of_measurement
+Unit (e.g.,kg)
+varchar
+50
+Total_amount
+Total cost
+decimal
+10,2
+
 Design
 Entity Relationship Diagram
 Figure 4 shows the Entity Relationship Diagram of the study. ERD is a diagram that depicts the relationship between entity sets in a database. In other words, ER diagrams aid in explaining logical database structure. Entities, attributes, and relationships are the three main elements built by ER diagrams
