@@ -13,6 +13,9 @@ require_login();
 // Set timezone for consistent NOW() in SQL and date/time functions
 date_default_timezone_set('Asia/Manila');
 
+// Check if this is an AJAX request
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     // Prevent direct access via GET
     header('Location: ../uploads/projects.php');
@@ -30,6 +33,11 @@ $purpose = trim($_POST['purpose'] ?? '');
 
 // ✅ 2. Validate inputs
 if ($project_id <= 0 || $name === '' || $total_quantity <= 0 || $unit === '') {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Missing or invalid required fields. Please ensure all fields are filled correctly.']);
+        exit;
+    }
     // Redirect with the original error style if validation fails
     echo "<p style='color:red; font-family:Arial; margin:20px;'>Error: Missing or invalid required fields. Please ensure Project ID is valid, Name is filled, Quantity is greater than 0, and Unit is filled.</p>";
     exit;
@@ -100,10 +108,20 @@ try {
 
 // ✅ 6. Redirect or display error
 if ($success) {
-    // Redirect to view_project.php with tab=materials
-    header("Location: ../modules/view_project.php?id=$project_id&tab=materials");
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'Material added successfully!']);
+        exit;
+    }
+    // Redirect to view_project.php with tab=materials and success message
+    header("Location: ../modules/view_project.php?id=$project_id&tab=materials&status=success&message=" . urlencode("Material added successfully!"));
     exit;
 } else {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Error processing material: ' . $error_message]);
+        exit;
+    }
     // Display error message
     echo "<p style='color:red; font-family:Arial; margin:20px;'>Error processing material: " . htmlspecialchars($error_message) . "</p>";
     exit;

@@ -356,8 +356,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Log the activity
                 log_activity($conn, 'ADD_REPORT', "Added report for Project ID: $project_id, Unit ID: $unit_id, Work: $work_done");
                 
-                // ✅ REDIRECT IS CORRECT: Go back to the 'reports' tab
-                header("Location: ../modules/view_project.php?id=$project_id&tab=reports");
+                // ✅ REDIRECT with success message for toast notification
+                header("Location: ../modules/view_project.php?id=$project_id&tab=reports&status=success&message=" . urlencode("Report added successfully!"));
                 exit;
             } catch (Exception $e) {
                 $conn->rollback();

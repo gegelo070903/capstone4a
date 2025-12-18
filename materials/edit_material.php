@@ -4,12 +4,25 @@ require_once '../includes/db.php';
 require_once '../includes/functions.php';
 require_login();
 
-if (!isset($_GET['id']) || !isset($_GET['project_id'])) {
-    die('<h3 style="color:red;">Invalid parameters provided.</h3>');
-}
+// Check if this is an AJAX request
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
-$id = intval($_GET['id']);
-$project_id = intval($_GET['project_id']);
+// For AJAX POST requests, get id and project_id from POST
+if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id = isset($_POST['material_id']) ? intval($_POST['material_id']) : 0;
+    $project_id = isset($_POST['project_id']) ? intval($_POST['project_id']) : 0;
+} else {
+    if (!isset($_GET['id']) || !isset($_GET['project_id'])) {
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid parameters provided.']);
+            exit;
+        }
+        die('<h3 style="color:red;">Invalid parameters provided.</h3>');
+    }
+    $id = intval($_GET['id']);
+    $project_id = intval($_GET['project_id']);
+}
 
 // Fetch material details for the form
 $stmt = $conn->prepare("SELECT * FROM materials WHERE id = ?");
@@ -19,6 +32,11 @@ $material = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$material) {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Material not found.']);
+        exit;
+    }
     die('<h3 style="color:red;">Material not found.</h3>');
 }
 
@@ -93,10 +111,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($stmt->execute()) {
         // Log the edit action
         log_activity($conn, 'EDIT_MATERIAL', "Edited material: $name (ID: $id) in project ID: $project_id - Qty: $final_total_quantity_db, Unit: $unit");
-        // 🎯 UPDATED REDIRECT to include &tab=materials
-        header("Location: ../modules/view_project.php?id=$project_id&tab=materials");
+        
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Material updated successfully!']);
+            exit;
+        }
+        // 🎯 UPDATED REDIRECT to include &tab=materials and success message
+        header("Location: ../modules/view_project.php?id=$project_id&tab=materials&status=success&message=" . urlencode("Material updated successfully!"));
         exit;
     } else {
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Error updating material: ' . $stmt->error]);
+            exit;
+        }
         echo "<h3 style='color:red;'>Error updating material: " . htmlspecialchars($stmt->error) . "</h3>";
     }
 }

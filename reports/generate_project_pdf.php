@@ -455,37 +455,6 @@ while ($unit = $units_res->fetch_assoc()) {
     } else {
         $html .= '<div class="no-data">No progress reports found for this unit.</div>';
     }
-    
-    // --- Checklist Proof Images ---
-    $checklist_images_res = $conn->query("
-        SELECT pc.item_description, ci.image_path 
-        FROM project_checklists pc
-        JOIN checklist_images ci ON ci.checklist_id = pc.id
-        WHERE pc.unit_id = $unit_id
-        ORDER BY pc.id, ci.id
-    ");
-    
-    if ($checklist_images_res && $checklist_images_res->num_rows > 0) {
-        $html .= '<div class="subsection-header">Checklist Documentation Photos</div>';
-        $current_item = '';
-        
-        while ($cimg = $checklist_images_res->fetch_assoc()) {
-            if ($current_item !== $cimg['item_description']) {
-                if ($current_item !== '') {
-                    $html .= '</div>'; // Close previous gallery
-                }
-                $current_item = $cimg['item_description'];
-                $html .= '<p style="margin: 15px 0 5px 0; font-weight: bold; color: #004AAD;">' . htmlspecialchars($current_item) . '</p>';
-                $html .= '<div class="image-gallery">';
-            }
-            
-            $cimg_path = __DIR__ . '/../uploads/checklist_proofs/' . $cimg['image_path'];
-            if (file_exists($cimg_path)) {
-                $html .= '<img class="proof-image" src="' . $cimg_path . '">';
-            }
-        }
-        $html .= '</div>'; // Close last gallery
-    }
 }
 
 $html .= '</body>';

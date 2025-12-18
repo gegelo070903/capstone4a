@@ -73,15 +73,20 @@ if (isset($_GET['delete_perm'])) {
     }
 }
 
-// ✅ Add Project - MODIFIED: Status is now automatically set to 'Pending'
+// ✅ Add Project - AJAX version (no page refresh)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_project'])) {
     $project_name = trim($_POST['project_name']);
     $project_location = trim($_POST['project_location']);
     $units = intval($_POST['units']);
     $status = 'Pending'; // ✅ AUTOMATED: Hardcode initial status to 'Pending'
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
     if (empty($project_name) || empty($project_location) || $units <= 0) {
-        // Store error in session to display after redirect
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Please fill in all required fields (Project Name, Location, Units).']);
+            exit;
+        }
         $_SESSION['toast_message'] = 'Please fill in all required fields (Project Name, Location, Units).';
         $_SESSION['toast_type'] = 'warning';
         header("Location: projects.php");
@@ -105,9 +110,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_project'])) {
             // Log the activity
             log_activity($conn, 'ADD_PROJECT', "Created project: $project_name (Location: $project_location, Units: $units, ID: $project_id)");
 
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Project added successfully with status: Pending!',
+                    'project' => [
+                        'id' => $project_id,
+                        'name' => $project_name,
+                        'location' => $project_location,
+                        'units' => $units,
+                        'status' => $status,
+                        'created_at' => date('M d, Y')
+                    ]
+                ]);
+                exit;
+            }
             header("Location: projects.php?status=success&message=" . urlencode("Project added successfully with status: Pending!"));
             exit;
         } else {
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Error adding project: ' . $stmt->error]);
+                exit;
+            }
             $_SESSION['toast_message'] = 'Error adding project: ' . $stmt->error;
             $_SESSION['toast_type'] = 'error';
             header("Location: projects.php");
@@ -493,11 +519,11 @@ label {font-weight:600;color:#374151;font-size:14px;}
   <div class="overlay-card">
     <button class="close-btn" onclick="toggleOverlay(false)">✕</button>
     <h3>Add New Project</h3>
-    <form method="POST" action="">
+    <form method="POST" action="" id="addProjectForm">
       <div class="form-grid">
-        <div class="form-group"><label>Project Name</label><input type="text" name="project_name" required></div>
-        <div class="form-group"><label>Location</label><input type="text" name="project_location" required></div>
-        <div class="form-group"><label>Project/Units</label><input type="number" name="units" min="1" required></div>
+        <div class="form-group"><label>Project Name</label><input type="text" name="project_name" id="add_project_name" required></div>
+        <div class="form-group"><label>Location</label><input type="text" name="project_location" id="add_project_location" required></div>
+        <div class="form-group"><label>Project/Units</label><input type="number" name="units" id="add_units" min="1" required></div>
         <!-- Status field REMOVED: Status is now automatically set to 'Pending' in PHP -->
       </div>
       <div class="overlay-actions">
@@ -538,8 +564,87 @@ label {font-weight:600;color:#374151;font-size:14px;}
 </div>
 
 <script>
-function toggleOverlay(show){document.getElementById('addOverlay').style.display=show?'flex':'none';}
+function toggleOverlay(show){
+  document.getElementById('addOverlay').style.display=show?'flex':'none';
+  if(!show) {
+    // Reset form when closing
+    document.getElementById('addProjectForm').reset();
+  }
+}
 function toggleEditOverlay(show){document.getElementById('editOverlay').style.display=show?'flex':'none';}
+
+// ✅ Add Project via AJAX (no page refresh)
+document.addEventListener('DOMContentLoaded', function() {
+  const addForm = document.getElementById('addProjectForm');
+  if (addForm) {
+    addForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(addForm);
+      formData.append('save_project', '1');
+      
+      fetch('projects.php', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast(data.message, 'success');
+          toggleOverlay(false);
+          
+          // Add new project card to the grid without refresh
+          const grid = document.getElementById('projectGrid');
+          const emptyState = grid.querySelector('.empty-state');
+          if (emptyState) emptyState.remove();
+          
+          const p = data.project;
+          const newCard = document.createElement('div');
+          newCard.className = 'project-card';
+          newCard.setAttribute('onclick', `window.location.href='../modules/view_project.php?id=${p.id}'`);
+          newCard.dataset.name = p.name.toLowerCase();
+          newCard.dataset.location = p.location.toLowerCase();
+          newCard.dataset.created = Math.floor(Date.now() / 1000);
+          
+          newCard.innerHTML = `
+            <div class="project-header">
+              <h3>${escapeHtml(p.name)}</h3>
+              <span class="status pending">${p.status}</span>
+            </div>
+            <div class="project-details">
+              <p><strong>Location:</strong> ${escapeHtml(p.location)}</p>
+              <p><strong>Project/Units:</strong> ${p.units}</p>
+              <p><strong>Created:</strong> ${p.created_at}</p>
+            </div>
+            <div style="margin-top:10px;" onclick="event.stopPropagation();">
+              <button onclick="confirmStatusChange(${p.id}, 'confirm')" class="btn-primary">Confirm</button>
+              <button onclick="confirmStatusChange(${p.id}, 'cancel')" class="btn-cancel">Cancel</button>
+              <button onclick="openEditModal(${p.id})" class="btn-primary">Edit</button>
+            </div>
+          `;
+          
+          grid.insertBefore(newCard, grid.firstChild);
+        } else {
+          showToast(data.message, 'error');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast('Error adding project. Please try again.', 'error');
+      });
+    });
+  }
+});
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
 // ✅ NEW: Status change confirmation function
 function confirmStatusChange(id, action) {

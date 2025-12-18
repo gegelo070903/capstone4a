@@ -263,7 +263,7 @@ include '../includes/header.php';
           <div class="material-header-row">
             <h4><?= htmlspecialchars($m['name']); ?></h4>
             <div class="material-buttons">
-              <a href="../materials/edit_material.php?id=<?= $m['id']; ?>&project_id=<?= $project_id; ?>" class="btn-primary btn-sm">Edit</a>
+              <button type="button" class="btn-primary btn-sm" onclick="openEditMaterialOverlay(<?= $m['id']; ?>, '<?= htmlspecialchars(addslashes($m['name']), ENT_QUOTES); ?>', <?= intval($m['total_quantity']); ?>, '<?= htmlspecialchars(addslashes($m['unit_of_measurement']), ENT_QUOTES); ?>', '<?= htmlspecialchars(addslashes($m['supplier'] ?? ''), ENT_QUOTES); ?>', '<?= htmlspecialchars(addslashes($m['purpose'] ?? ''), ENT_QUOTES); ?>')">Edit</button>
               <a href="../materials/delete_material.php?id=<?= $m['id']; ?>&project_id=<?= $project_id; ?>" class="btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this material?');">Delete</a>
             </div>
           </div>
@@ -356,7 +356,7 @@ include '../includes/header.php';
                   <strong><?= htmlspecialchars($display_date); ?></strong>
                   <div class="report-actions">
                     <a href="../reports/view_report.php?id=<?= $r['id']; ?>" class="btn-view">View</a>
-                    <a href="../reports/edit_report.php?id=<?= $r['id']; ?>" class="btn-edit">Edit</a>
+                    <button type="button" class="btn-edit" onclick="openEditReportOverlay(<?= $r['id']; ?>)">Edit</button>
                     <a href="../reports/delete_report.php?id=<?= $r['id']; ?>&project_id=<?= $project_id; ?>"
                        class="btn-delete"
                        onclick="return confirm('Are you sure you want to delete this report?');">
@@ -410,7 +410,7 @@ include '../includes/header.php';
   <div class="overlay-card">
     <button class="close-btn" onclick="toggleChecklistOverlay(false)">✕</button>
     <h3 class="overlay-title">Add Checklist Item</h3>
-    <form method="POST" action="../checklist/process_add_checklist_item.php" class="checklist-form">
+    <form id="addChecklistForm" method="POST" action="../checklist/process_add_checklist_item.php" class="checklist-form">
       <input type="hidden" name="project_id" value="<?= $project_id; ?>">
 
       <div class="form-group">
@@ -419,8 +419,8 @@ include '../includes/header.php';
       </div>
 
       <div class="form-group">
-        <label for="unit_id">Select Unit:</label>
-        <select id="unit_id" name="unit_id" required>
+        <label for="checklist_unit_id">Select Unit:</label>
+        <select id="checklist_unit_id" name="unit_id" required>
           <option value="">-- Select a Unit --</option>
           <option value="all">Apply to All Units</option>
           <?php foreach ($units as $unit): ?>
@@ -505,6 +505,53 @@ include '../includes/header.php';
 
       <div class="form-actions">
         <button type="button" class="btn-cancel" onclick="toggleEditUnitOverlay(false)">Cancel</button>
+        <button type="submit" class="btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ✅ EDIT MATERIAL OVERLAY -->
+<div class="overlay" id="editMaterialOverlay">
+  <div class="overlay-card">
+    <button class="close-btn" onclick="toggleEditMaterialOverlay(false)">✕</button>
+    <h3 class="overlay-title">Edit Material</h3>
+
+    <form id="editMaterialForm" method="POST" action="../materials/edit_material.php">
+      <input type="hidden" name="material_id" id="edit_material_id">
+      <input type="hidden" name="project_id" value="<?= $project_id; ?>">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit_material_name">Material Name:</label>
+          <input type="text" id="edit_material_name" name="name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_total_quantity">Total Quantity:</label>
+          <input type="number" id="edit_total_quantity" name="total_quantity" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit_unit_of_measurement">Unit of Measurement:</label>
+          <input type="text" id="edit_unit_of_measurement" name="unit_of_measurement" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_supplier">Supplier (optional):</label>
+          <input type="text" id="edit_supplier" name="supplier">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="edit_purpose">Purpose (optional):</label>
+        <input type="text" id="edit_purpose" name="purpose">
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" onclick="toggleEditMaterialOverlay(false)">Cancel</button>
         <button type="submit" class="btn-primary">Save Changes</button>
       </div>
     </form>
@@ -611,6 +658,98 @@ include '../includes/header.php';
   </div>
 </div>
 <!-- END ADD REPORT OVERLAY -->
+
+<!-- ======================================================= -->
+<!-- ✅ EDIT REPORT OVERLAY -->
+<!-- ======================================================= -->
+<div class="overlay" id="editReportOverlay">
+  <div class="overlay-card" style="max-width: 700px;">
+    <button class="close-btn" onclick="toggleEditReportOverlay(false)">✕</button>
+    <h3 class="overlay-title">Edit Report — Project: <?= htmlspecialchars($project['name']); ?></h3>
+
+    <!-- Error Box Placeholder -->
+    <div class="error-box" id="edit-report-error-box" style="display:none;">
+        <ul id="edit-report-error-list" style="margin:0 0 0 18px;"></ul>
+    </div>
+    
+    <form id="editReportForm" method="post" action="../reports/edit_report.php" enctype="multipart/form-data">
+        <input type="hidden" name="report_id" id="edit_report_id">
+        <input type="hidden" name="project_id" value="<?= $project_id ?>">
+
+        <div class="form-grid">
+            <!-- 1. Unit Selection (readonly for edit) -->
+            <div class="form-group">
+              <label for="edit_report_unit_id">Unit</label>
+              <select id="edit_report_unit_id" name="unit_id" disabled style="background-color:#e5e7eb;">
+                <?php foreach ($units as $u): ?>
+                  <option value="<?= (int)$u['id'] ?>"><?= htmlspecialchars($u['name']) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <input type="hidden" name="unit_id" id="edit_report_unit_id_hidden">
+            </div>
+            <!-- 2. Date -->
+            <div class="form-group">
+              <label for="edit_report_date">Date (MM-DD-YYYY)</label>
+              <input type="text" id="edit_report_date" name="report_date" required>
+            </div>
+            
+            <!-- 3. Progress -->
+            <div class="form-group">
+              <label for="edit_progress_percentage">Progress (%)</label>
+              <input type="number" id="edit_progress_percentage" name="progress_percentage"
+                     min="0" max="100" required>
+            </div>
+        </div>
+        
+        <div class="section-divider"></div>
+
+        <!-- 4. Work Done -->
+        <div class="form-group">
+          <label for="edit_work_done">Work Done</label>
+          <input type="text" id="edit_work_done" name="work_done" required>
+        </div>
+
+        <!-- 5. Remarks -->
+        <div class="form-group">
+          <label for="edit_remarks">Remarks (Optional)</label>
+          <textarea id="edit_remarks" name="remarks" rows="3"></textarea>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- 6. Existing Materials Used (display only) -->
+        <h4>Current Materials Used</h4>
+        <div id="edit-existing-materials" style="margin-bottom:15px; color:#6b7280;">
+            <p>Loading...</p>
+        </div>
+
+        <!-- 7. Add New Materials -->
+        <h4>Add More Materials</h4>
+        <div id="edit-materials-rows"></div> 
+        <button type="button" class="btn-secondary" id="edit-add-material-row">+ Add Material</button>
+
+        <div class="section-divider"></div>
+        
+        <!-- 8. Existing Images -->
+        <h4>Current Proof Images</h4>
+        <div id="edit-existing-images" style="margin-bottom:15px;">
+            <p style="color:#6b7280;">Loading...</p>
+        </div>
+
+        <!-- 9. Upload New Images -->
+        <div class="form-group">
+          <label for="edit_proof_images">Upload Additional Images (Optional)</label>
+          <input type="file" id="edit_proof_images" name="proof_images[]" multiple accept="image/*">
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" name="update_report" class="btn-primary">Update Report</button>
+          <button type="button" class="btn-cancel" onclick="toggleEditReportOverlay(false)">Cancel</button>
+        </div>
+    </form>
+  </div>
+</div>
+<!-- END EDIT REPORT OVERLAY -->
 
 <style>
 /* ====== BASE STYLES (UNCHANGED) ====== */
@@ -1241,10 +1380,16 @@ function openTab(tabId) {
 
 function toggleChecklistOverlay(show) {
   document.getElementById('checklistOverlay').style.display = show ? 'flex' : 'none';
+  if (!show) {
+    document.getElementById('addChecklistForm').reset();
+  }
 }
 
 function toggleMaterialOverlay(show) {
   document.getElementById('materialOverlay').style.display = show ? 'flex' : 'none';
+  if (!show) {
+    document.getElementById('addMaterialForm').reset();
+  }
 }
 
 // ✅ Edit Unit Overlay Functions
@@ -1259,9 +1404,102 @@ function openEditUnitOverlay(unitId, unitName, unitDescription) {
   toggleEditUnitOverlay(true);
 }
 
+// ✅ Edit Material Overlay Functions
+function toggleEditMaterialOverlay(show) {
+  document.getElementById('editMaterialOverlay').style.display = show ? 'flex' : 'none';
+}
+
+function openEditMaterialOverlay(materialId, name, totalQuantity, unit, supplier, purpose) {
+  document.getElementById('edit_material_id').value = materialId;
+  document.getElementById('edit_material_name').value = name;
+  document.getElementById('edit_total_quantity').value = totalQuantity;
+  document.getElementById('edit_unit_of_measurement').value = unit;
+  document.getElementById('edit_supplier').value = supplier || '';
+  document.getElementById('edit_purpose').value = purpose || '';
+  toggleEditMaterialOverlay(true);
+}
+
+// ✅ Edit Report Overlay Functions
+function toggleEditReportOverlay(show) {
+  document.getElementById('editReportOverlay').style.display = show ? 'flex' : 'none';
+  if (!show) {
+    document.getElementById('editReportForm').reset();
+    document.getElementById('edit-existing-materials').innerHTML = '<p>Loading...</p>';
+    document.getElementById('edit-existing-images').innerHTML = '<p style="color:#6b7280;">Loading...</p>';
+    document.getElementById('edit-materials-rows').innerHTML = '';
+  }
+}
+
+function openEditReportOverlay(reportId) {
+  // Show loading state
+  toggleEditReportOverlay(true);
+  
+  fetch(`../reports/get_report.php?id=${reportId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) {
+        showToast(data.message || 'Failed to load report data', 'error');
+        toggleEditReportOverlay(false);
+        return;
+      }
+      
+      const r = data.report;
+      
+      // Populate form fields
+      document.getElementById('edit_report_id').value = r.id;
+      document.getElementById('edit_report_unit_id').value = r.unit_id;
+      document.getElementById('edit_report_unit_id_hidden').value = r.unit_id;
+      document.getElementById('edit_report_date').value = r.report_date;
+      document.getElementById('edit_progress_percentage').value = r.progress_percentage;
+      document.getElementById('edit_work_done').value = r.work_done;
+      document.getElementById('edit_remarks').value = r.remarks || '';
+      
+      // Display existing materials
+      const matsContainer = document.getElementById('edit-existing-materials');
+      if (r.materials_used && r.materials_used.length > 0) {
+        let matsHtml = '<table style="width:100%; font-size:13px;"><thead><tr><th>Material</th><th style="text-align:center;">Qty Used</th><th style="text-align:center;">Unit</th></tr></thead><tbody>';
+        r.materials_used.forEach(m => {
+          matsHtml += `<tr><td>${m.name}</td><td style="text-align:center;">${m.quantity_used}</td><td style="text-align:center;">${m.unit_of_measurement}</td></tr>`;
+        });
+        matsHtml += '</tbody></table>';
+        matsContainer.innerHTML = matsHtml;
+      } else {
+        matsContainer.innerHTML = '<p style="color:#6b7280;">No materials recorded for this report.</p>';
+      }
+      
+      // Display existing images
+      const imgsContainer = document.getElementById('edit-existing-images');
+      if (r.images && r.images.length > 0) {
+        let imgsHtml = '<div style="display:flex; flex-wrap:wrap; gap:10px;">';
+        r.images.forEach(img => {
+          imgsHtml += `<img src="../reports/report_images/${img.image_path}" style="width:80px; height:80px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb;">`;
+        });
+        imgsHtml += '</div>';
+        imgsContainer.innerHTML = imgsHtml;
+      } else {
+        imgsContainer.innerHTML = '<p style="color:#6b7280;">No images attached to this report.</p>';
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('Error loading report data.', 'error');
+      toggleEditReportOverlay(false);
+    });
+}
+
 // ✅ NEW: Report Overlay Toggle
 function toggleReportOverlay(show) {
     document.getElementById('addReportOverlay').style.display = show ? 'flex' : 'none';
+}
+
+// Helper function to reload page with specific tab
+function reloadWithTab(tabName) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('tab', tabName);
+  // Remove status/message params to avoid showing toast again
+  url.searchParams.delete('status');
+  url.searchParams.delete('message');
+  window.location.href = url.toString();
 }
 
 // FIX IMPLEMENTED: Read the 'tab' query parameter and open the correct tab
@@ -1270,14 +1508,205 @@ document.addEventListener('DOMContentLoaded', () => {
   const tab = params.get('tab') || 'units';
   openTab(tab);
 
+  // ✅ AJAX: Add Checklist Form Handler
+  const addChecklistForm = document.getElementById('addChecklistForm');
+  if (addChecklistForm) {
+    addChecklistForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast(data.message, 'success');
+          toggleChecklistOverlay(false);
+          setTimeout(() => reloadWithTab('units'), 1000);
+        } else {
+          showToast(data.message, 'error');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast('Error adding checklist item. Please try again.', 'error');
+      });
+    });
+  }
+
+  // ✅ AJAX: Add Material Form Handler
+  const addMaterialForm = document.getElementById('addMaterialForm');
+  if (addMaterialForm) {
+    addMaterialForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast(data.message, 'success');
+          toggleMaterialOverlay(false);
+          setTimeout(() => reloadWithTab('materials'), 1000);
+        } else {
+          showToast(data.message, 'error');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast('Error adding material. Please try again.', 'error');
+      });
+    });
+  }
+
+  // ✅ AJAX: Edit Unit Form Handler
+  const editUnitForm = document.getElementById('editUnitForm');
+  if (editUnitForm) {
+    editUnitForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast(data.message, 'success');
+          toggleEditUnitOverlay(false);
+          setTimeout(() => reloadWithTab('units'), 1000);
+        } else {
+          showToast(data.message, 'error');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast('Error updating unit. Please try again.', 'error');
+      });
+    });
+  }
+
+  // ✅ AJAX: Edit Material Form Handler
+  const editMaterialForm = document.getElementById('editMaterialForm');
+  if (editMaterialForm) {
+    editMaterialForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast(data.message, 'success');
+          toggleEditMaterialOverlay(false);
+          setTimeout(() => reloadWithTab('materials'), 1000);
+        } else {
+          showToast(data.message, 'error');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast('Error updating material. Please try again.', 'error');
+      });
+    });
+  }
+
+  // ✅ AJAX: Edit Report Form Handler
+  const editReportForm = document.getElementById('editReportForm');
+  if (editReportForm) {
+    // Add material row functionality for edit report
+    const editMaterialsRows = document.getElementById('edit-materials-rows');
+    const editAddMatBtn = document.getElementById('edit-add-material-row');
+    
+    function editRowTemplate() {
+      let opts = MATS_DATA.map(m => `
+        <option value="${m.id}" data-rem="${m.remaining_quantity}" data-uom="${m.unit_of_measurement}">
+          ${m.name} (rem: ${Math.floor(m.remaining_quantity)} ${m.unit_of_measurement})
+        </option>`).join('');
+
+      return `
+        <div class="mat-row" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+          <select name="new_material_id[]" class="mat-select" required style="flex:2;">
+            <option value="">Select material</option>
+            ${opts}
+          </select>
+          <input type="number" name="new_quantity_used[]" min="1" placeholder="Qty Used" required style="flex:1;">
+          <span class="unit-label" style="min-width:40px; color:#555;"></span>
+          <button type="button" class="remove-row btn-secondary" style="padding: 6px 10px;">Remove</button>
+        </div>`;
+    }
+
+    editAddMatBtn.addEventListener('click', () => {
+      editMaterialsRows.insertAdjacentHTML('beforeend', editRowTemplate());
+    });
+
+    editMaterialsRows.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-row')) {
+        e.target.closest('.mat-row').remove();
+      }
+    });
+
+    editMaterialsRows.addEventListener('change', (e) => {
+      if (e.target.classList.contains('mat-select')) {
+        const selected = e.target.options[e.target.selectedIndex];
+        const uom = selected.dataset.uom || '';
+        const unitLabel = e.target.closest('.mat-row').querySelector('.unit-label');
+        unitLabel.textContent = uom ? `(${uom})` : '';
+      }
+    });
+
+    editReportForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const errorBox = document.getElementById('edit-report-error-box');
+      const errorList = document.getElementById('edit-report-error-list');
+      
+      errorBox.style.display = 'none';
+      errorList.innerHTML = '';
+      
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast(data.message, 'success');
+          toggleEditReportOverlay(false);
+          setTimeout(() => reloadWithTab('reports'), 1000);
+        } else {
+          errorList.innerHTML = `<li>${data.message}</li>`;
+          errorBox.style.display = 'block';
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast('Error updating report. Please try again.', 'error');
+      });
+    });
+  }
+
   // --- START NEW REPORT FORM SETUP (Embedded Logic) ---
+  // ✅ Materials data available for both Add and Edit Report forms
+  const MATS_DATA = <?= json_encode($mats) ?>; 
+  const BASE_IMAGE_URL = '../uploads/checklist_proofs/';
+
   const reportOverlayForm = document.getElementById('addReportForm');
   if (reportOverlayForm) {
-      // ✅ NEW: PHP Variables encoded for JavaScript use
-      // NOTE: This JSON must be correct or the whole JS block fails.
-      const MATS_DATA = <?= json_encode($mats) ?>; 
-      const BASE_IMAGE_URL = '../uploads/checklist_proofs/';
-
       const materialsRows = document.getElementById('materials-rows'); 
       const addMatBtn = document.getElementById('add-material-row'); 
       const workDoneSelect = document.getElementById('work_done_checklist');
@@ -1419,7 +1848,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (data.success) {
                   showToast('Report added successfully!', 'success');
                   toggleReportOverlay(false);
-                  setTimeout(() => window.location.reload(), 1000); // Reload parent page to update reports tab
+                  setTimeout(() => reloadWithTab('reports'), 1000); // Reload to reports tab
               } else {
                   // Display server-side errors
                   errorList.innerHTML = data.errors.map(err => `<li>${err}</li>`).join('');

@@ -3,6 +3,9 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_login();
 
+// Check if this is an AJAX request
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
 // Handle POST request (from overlay or direct form)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Get unit_id and project_id from POST (overlay) or fallback to GET (direct page)
@@ -13,6 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $description = isset($_POST['description']) ? trim($_POST['description']) : '';
   
   if ($unit_id <= 0 || $project_id <= 0 || empty($name)) {
+    if ($isAjax) {
+      header('Content-Type: application/json');
+      echo json_encode(['success' => false, 'message' => 'Invalid data provided.']);
+      exit;
+    }
     header("Location: ../modules/view_project.php?id=$project_id&error=invalid_data");
     exit;
   }
@@ -26,7 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Log the edit action
   log_activity($conn, 'EDIT_UNIT', "Edited unit: $name (ID: $unit_id) in project ID: $project_id");
 
-  header("Location: ../modules/view_project.php?id=$project_id");
+  if ($isAjax) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'message' => 'Unit updated successfully!', 'unit' => ['id' => $unit_id, 'name' => $name, 'description' => $description]]);
+    exit;
+  }
+  header("Location: ../modules/view_project.php?id=$project_id&status=success&message=" . urlencode("Unit updated successfully!"));
   exit;
 }
 

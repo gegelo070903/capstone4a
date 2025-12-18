@@ -9,9 +9,17 @@ require_once '../includes/db.php';
 require_once '../includes/functions.php';
 require_login();
 
-// ✅ Get report ID
-$report_id = $_GET['id'] ?? null;
+// Check if this is an AJAX request
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+// ✅ Get report ID - support both GET and POST for AJAX
+$report_id = $_POST['report_id'] ?? $_GET['id'] ?? null;
 if (!$report_id) {
+  if ($isAjax) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Report not specified.']);
+    exit;
+  }
   die('Report not specified.');
 }
 
@@ -25,6 +33,11 @@ $stmt->execute();
 $report = $stmt->get_result()->fetch_assoc();
 
 if (!$report) {
+  if ($isAjax) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Report not found.']);
+    exit;
+  }
   die('Report not found.');
 }
 
@@ -190,11 +203,22 @@ if (isset($_POST['update_report'])) {
     $conn->commit();
     // Log the edit action
     log_activity($conn, 'EDIT_REPORT', "Edited report ID: $report_id (Date: $report_date) for project ID: $project_id");
-    header("Location: ../modules/view_project.php?id=$project_id&tab=reports");
+    
+    if ($isAjax) {
+      header('Content-Type: application/json');
+      echo json_encode(['success' => true, 'message' => 'Report updated successfully!']);
+      exit;
+    }
+    header("Location: ../modules/view_project.php?id=$project_id&tab=reports&status=success&message=" . urlencode("Report updated successfully!"));
     exit;
 
   } catch (Exception $e) {
     $conn->rollback();
+    if ($isAjax) {
+      header('Content-Type: application/json');
+      echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+      exit;
+    }
     // Add error message for display
     $report['error_message'] = $e->getMessage();
   }

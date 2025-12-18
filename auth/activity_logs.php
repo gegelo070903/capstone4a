@@ -11,6 +11,91 @@ if (!is_super_admin()) {
     exit;
 }
 
+// Check if AJAX request
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+// Pagination
+$per_page = 50;
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$offset = ($page - 1) * $per_page;
+
+// Filter by action type
+$action_filter = isset($_GET['action']) ? trim($_GET['action']) : '';
+$date_filter = isset($_GET['date']) ? trim($_GET['date']) : '';
+
+// Build query
+$where_conditions = [];
+$params = [];
+$types = '';
+
+if (!empty($action_filter)) {
+    $where_conditions[] = "action = ?";
+    $params[] = $action_filter;
+    $types .= 's';
+}
+
+if (!empty($date_filter)) {
+    $where_conditions[] = "DATE(created_at) = ?";
+    $params[] = $date_filter;
+    $types .= 's';
+}
+
+$where_sql = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+
+// Get total count
+$count_sql = "SELECT COUNT(*) as total FROM activity_logs $where_sql";
+$count_stmt = $conn->prepare($count_sql);
+if (!empty($params)) {
+    $count_stmt->bind_param($types, ...$params);
+}
+$count_stmt->execute();
+$total_records = $count_stmt->get_result()->fetch_assoc()['total'];
+$count_stmt->close();
+
+$total_pages = ceil($total_records / $per_page);
+
+// Get logs
+$logs_sql = "SELECT * FROM activity_logs $where_sql ORDER BY created_at DESC LIMIT ? OFFSET ?";
+$logs_stmt = $conn->prepare($logs_sql);
+if (!empty($params)) {
+    $log_params = $params;
+    $log_params[] = $per_page;
+    $log_params[] = $offset;
+    $log_types = $types . 'ii';
+    $logs_stmt->bind_param($log_types, ...$log_params);
+} else {
+    $logs_stmt->bind_param('ii', $per_page, $offset);
+}
+$logs_stmt->execute();
+$logs_result = $logs_stmt->get_result();
+$logs_stmt->close();
+
+// If AJAX, return JSON
+if ($isAjax) {
+    $logs_data = [];
+    while ($log = $logs_result->fetch_assoc()) {
+        $logs_data[] = $log;
+    }
+    
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'logs' => $logs_data,
+        'total_records' => $total_records,
+        'total_pages' => $total_pages,
+        'current_page' => $page,
+        'per_page' => $per_page
+    ]);
+    exit;
+}
+
+// Get distinct actions for filter dropdown
+$actions_result = $conn->query("SELECT DISTINCT action FROM activity_logs ORDER BY action ASC");
+$action_types = [];
+while ($row = $actions_result->fetch_assoc()) {
+    $action_types[] = $row['action'];
+}
+
 include '../includes/header.php';
 
 // Pagination
@@ -74,6 +159,9 @@ $action_types = [];
 while ($row = $actions_result->fetch_assoc()) {
     $action_types[] = $row['action'];
 }
+
+// Reset logs result for initial render
+$logs_result->data_seek(0);
 ?>
 
 <div class="content-wrapper">
@@ -81,14 +169,17 @@ while ($row = $actions_result->fetch_assoc()) {
     <div class="page-header">
       <h2><i class="fa-solid fa-clock-rotate-left"></i> Activity Logs</h2>
       <span class="badge-info">Read-Only Audit Trail</span>
+      <button type="button" class="btn-refresh" onclick="refreshLogs()" title="Refresh Logs">
+        <i class="fa-solid fa-sync-alt" id="refreshIcon"></i> Refresh
+      </button>
     </div>
 
     <!-- Filter Section -->
     <div class="card filter-card">
-      <form method="GET" class="filter-form" id="filterForm">
+      <form method="GET" class="filter-form" id="filterForm" onsubmit="return filterLogs(event)">
         <div class="filter-group">
           <label for="action">Action Type</label>
-          <select name="action" id="action" onchange="document.getElementById('filterForm').submit()">
+          <select name="action" id="action" onchange="filterLogs()">
             <option value="">All Actions</option>
             <?php foreach ($action_types as $type): ?>
               <option value="<?= htmlspecialchars($type) ?>" <?= $action_filter === $type ? 'selected' : '' ?>>
@@ -99,17 +190,17 @@ while ($row = $actions_result->fetch_assoc()) {
         </div>
         <div class="filter-group">
           <label for="date">Date</label>
-          <input type="date" name="date" id="date" value="<?= htmlspecialchars($date_filter) ?>" onchange="document.getElementById('filterForm').submit()">
+          <input type="date" name="date" id="date" value="<?= htmlspecialchars($date_filter) ?>" onchange="filterLogs()">
         </div>
         <div class="filter-buttons">
-          <a href="activity_logs.php" class="btn-clear"><i class="fa-solid fa-times"></i> Clear</a>
+          <button type="button" class="btn-clear" onclick="clearFilters()"><i class="fa-solid fa-times"></i> Clear</button>
         </div>
       </form>
     </div>
 
     <!-- Logs Table -->
     <div class="card">
-      <div class="table-info">
+      <div class="table-info" id="tableInfo">
         <p>Showing <?= number_format($total_records) ?> total records (Page <?= $page ?> of <?= max(1, $total_pages) ?>)</p>
       </div>
       
@@ -125,9 +216,9 @@ while ($row = $actions_result->fetch_assoc()) {
               <th style="width: 15%">IP Address</th>
             </tr>
           </thead>
-          <tbody>
-            <?php if ($logs && $logs->num_rows > 0): ?>
-              <?php while ($log = $logs->fetch_assoc()): ?>
+          <tbody id="logsTableBody">
+            <?php if ($logs_result && $logs_result->num_rows > 0): ?>
+              <?php while ($log = $logs_result->fetch_assoc()): ?>
                 <tr>
                   <td><?= htmlspecialchars($log['id']) ?></td>
                   <td><?= date('M d, Y h:i A', strtotime($log['created_at'])) ?></td>
@@ -149,11 +240,11 @@ while ($row = $actions_result->fetch_assoc()) {
       </div>
 
       <!-- Pagination -->
+      <div class="pagination" id="paginationContainer">
       <?php if ($total_pages > 1): ?>
-        <div class="pagination">
           <?php if ($page > 1): ?>
-            <a href="?page=1<?= $action_filter ? '&action=' . urlencode($action_filter) : '' ?><?= $date_filter ? '&date=' . urlencode($date_filter) : '' ?>" class="page-link">&laquo; First</a>
-            <a href="?page=<?= $page - 1 ?><?= $action_filter ? '&action=' . urlencode($action_filter) : '' ?><?= $date_filter ? '&date=' . urlencode($date_filter) : '' ?>" class="page-link">&lsaquo; Prev</a>
+            <a href="javascript:void(0)" onclick="goToPage(1)" class="page-link">&laquo; First</a>
+            <a href="javascript:void(0)" onclick="goToPage(<?= $page - 1 ?>)" class="page-link">&lsaquo; Prev</a>
           <?php endif; ?>
           
           <?php
@@ -161,16 +252,16 @@ while ($row = $actions_result->fetch_assoc()) {
           $end = min($total_pages, $page + 2);
           for ($i = $start; $i <= $end; $i++):
           ?>
-            <a href="?page=<?= $i ?><?= $action_filter ? '&action=' . urlencode($action_filter) : '' ?><?= $date_filter ? '&date=' . urlencode($date_filter) : '' ?>" 
+            <a href="javascript:void(0)" onclick="goToPage(<?= $i ?>)" 
                class="page-link <?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
           <?php endfor; ?>
           
           <?php if ($page < $total_pages): ?>
-            <a href="?page=<?= $page + 1 ?><?= $action_filter ? '&action=' . urlencode($action_filter) : '' ?><?= $date_filter ? '&date=' . urlencode($date_filter) : '' ?>" class="page-link">Next &rsaquo;</a>
-            <a href="?page=<?= $total_pages ?><?= $action_filter ? '&action=' . urlencode($action_filter) : '' ?><?= $date_filter ? '&date=' . urlencode($date_filter) : '' ?>" class="page-link">Last &raquo;</a>
+            <a href="javascript:void(0)" onclick="goToPage(<?= $page + 1 ?>)" class="page-link">Next &rsaquo;</a>
+            <a href="javascript:void(0)" onclick="goToPage(<?= $total_pages ?>)" class="page-link">Last &raquo;</a>
           <?php endif; ?>
-        </div>
       <?php endif; ?>
+      </div>
     </div>
   </div>
 </div>
@@ -410,6 +501,185 @@ while ($row = $actions_result->fetch_assoc()) {
   color: white;
   border-color: #2563eb;
 }
+
+.btn-refresh {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  transition: background 0.2s;
+}
+
+.btn-refresh:hover {
+  background: #059669;
+}
+
+.btn-refresh.loading i {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading-row td {
+  text-align: center;
+  padding: 40px !important;
+  color: #6b7280;
+}
 </style>
+
+<script>
+let currentPage = <?= $page ?>;
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    const options = { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+    return date.toLocaleDateString('en-US', options).replace(',', '');
+}
+
+function getActionClass(action) {
+    return 'action-' + action.toLowerCase().replace(/_/g, '-');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function fetchLogs(page = 1) {
+    const actionFilter = document.getElementById('action').value;
+    const dateFilter = document.getElementById('date').value;
+    
+    const params = new URLSearchParams();
+    params.append('page', page);
+    if (actionFilter) params.append('action', actionFilter);
+    if (dateFilter) params.append('date', dateFilter);
+    
+    const tbody = document.getElementById('logsTableBody');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="6"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</td></tr>';
+    
+    fetch('activity_logs.php?' + params.toString(), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            currentPage = data.current_page;
+            renderLogs(data.logs);
+            renderPagination(data.current_page, data.total_pages);
+            updateTableInfo(data.total_records, data.current_page, data.total_pages);
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading logs.</td></tr>';
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading logs.</td></tr>';
+    });
+}
+
+function renderLogs(logs) {
+    const tbody = document.getElementById('logsTableBody');
+    
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No activity logs found.</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    logs.forEach(log => {
+        html += `<tr>
+            <td>${escapeHtml(log.id)}</td>
+            <td>${formatDate(log.created_at)}</td>
+            <td>${escapeHtml(log.username)}</td>
+            <td>
+                <span class="action-badge ${getActionClass(log.action)}">
+                    ${escapeHtml(log.action)}
+                </span>
+            </td>
+            <td class="details-cell">${escapeHtml(log.details)}</td>
+            <td>${escapeHtml(log.ip_address)}</td>
+        </tr>`;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+function renderPagination(currentPage, totalPages) {
+    const container = document.getElementById('paginationContainer');
+    
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    
+    if (currentPage > 1) {
+        html += `<a href="javascript:void(0)" onclick="goToPage(1)" class="page-link">&laquo; First</a>`;
+        html += `<a href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" class="page-link">&lsaquo; Prev</a>`;
+    }
+    
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = start; i <= end; i++) {
+        html += `<a href="javascript:void(0)" onclick="goToPage(${i})" class="page-link ${i === currentPage ? 'active' : ''}">${i}</a>`;
+    }
+    
+    if (currentPage < totalPages) {
+        html += `<a href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" class="page-link">Next &rsaquo;</a>`;
+        html += `<a href="javascript:void(0)" onclick="goToPage(${totalPages})" class="page-link">Last &raquo;</a>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+function updateTableInfo(totalRecords, currentPage, totalPages) {
+    const info = document.getElementById('tableInfo');
+    info.innerHTML = `<p>Showing ${totalRecords.toLocaleString()} total records (Page ${currentPage} of ${Math.max(1, totalPages)})</p>`;
+}
+
+function goToPage(page) {
+    fetchLogs(page);
+}
+
+function filterLogs(event) {
+    if (event) event.preventDefault();
+    fetchLogs(1);
+    return false;
+}
+
+function clearFilters() {
+    document.getElementById('action').value = '';
+    document.getElementById('date').value = '';
+    fetchLogs(1);
+}
+
+function refreshLogs() {
+    const btn = document.querySelector('.btn-refresh');
+    btn.classList.add('loading');
+    
+    fetchLogs(currentPage);
+    
+    setTimeout(() => {
+        btn.classList.remove('loading');
+        if (typeof showToast === 'function') {
+            showToast('Activity logs refreshed!', 'success');
+        }
+    }, 500);
+}
+</script>
 
 <?php include '../includes/footer.php'; ?>

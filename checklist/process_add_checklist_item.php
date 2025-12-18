@@ -8,19 +8,37 @@ require_once __DIR__ . '/../includes/functions.php';
 
 require_login();
 
+// Check if this is an AJAX request
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
 if (!is_admin()) {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Access denied.']);
+        exit();
+    }
     header("Location: ../modules/projects.php?status=access_denied");
     exit();
 }
 
 // --- 1. Validate Project ID ---
 if (!isset($_POST['project_id']) || !is_numeric($_POST['project_id'])) {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Invalid project ID.']);
+        exit();
+    }
     die('<h3 style="color:red;">Invalid project ID.</h3>');
 }
 $project_id = (int)$_POST['project_id'];
 
 // --- 2. Validate Checklist Description ---
 if (empty($_POST['item_description'])) {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Checklist description cannot be empty.']);
+        exit();
+    }
     header("Location: ../modules/view_project.php?id=$project_id&status=checklist_item_added_error&message=" . urlencode("Checklist description cannot be empty."));
     exit();
 }
@@ -28,6 +46,11 @@ $item_description = trim($_POST['item_description']);
 
 // --- 3. Validate Unit ID ---
 if (!isset($_POST['unit_id']) || $_POST['unit_id'] === '') {
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Please select a unit.']);
+        exit();
+    }
     header("Location: ../modules/view_project.php?id=$project_id&status=checklist_item_added_error&message=" . urlencode("Please select a unit."));
     exit();
 }
@@ -115,11 +138,21 @@ try {
     $units_applied = $apply_to_all ? 'All Units' : "Unit ID: $unit_selection";
     log_activity($conn, 'ADD_CHECKLIST', "Added checklist item: '$item_description' to $units_applied (Project ID: $project_id)");
     
-    header("Location: ../modules/view_project.php?id=$project_id&tab=units&status=checklist_item_added_success");
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'Checklist item added successfully!']);
+        exit();
+    }
+    header("Location: ../modules/view_project.php?id=$project_id&tab=units&status=success&message=" . urlencode("Checklist item added successfully!"));
     exit();
 
 } catch (Exception $e) {
     $conn->rollback();
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit();
+    }
     header("Location: ../modules/view_project.php?id=$project_id&status=checklist_item_added_error&message=" . urlencode($e->getMessage()));
     exit();
 }
