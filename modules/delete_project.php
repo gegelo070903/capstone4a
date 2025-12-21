@@ -40,7 +40,7 @@ if ($stmt->execute()) {
     header("Location: ../uploads/projects.php?status=success&message=" . urlencode("Project archived successfully."));
     exit();
 } else {
-    echo "<h3 style='color:red'>❌ Soft delete failed: " . htmlspecialchars($stmt->error) . "</h3>";
+    echo "<h3 style='color:red'> Soft delete failed: " . htmlspecialchars($stmt->error) . "</h3>";
 }
 $stmt->close();
 ?>
