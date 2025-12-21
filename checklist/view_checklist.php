@@ -620,7 +620,15 @@ function attachEventListeners() {
       const id = btn.dataset.id;
       if (confirm('Delete this checklist item?')) {
         fetch(`delete_checklist_item.php?id=${id}&project_id=<?= $project_id; ?>&unit_id=<?= $unit_id; ?>`)
-          .then(() => reloadChecklist());
+          .then(res => res.json())
+          .then(data => {
+            if (data.status === 'success') {
+              reloadChecklist();
+            } else {
+              alert(data.message || 'Failed to delete checklist item.');
+            }
+          })
+          .catch(() => alert('Network error. Failed to delete checklist item.'));
       }
     };
   });
