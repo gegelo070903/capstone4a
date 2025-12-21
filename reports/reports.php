@@ -21,10 +21,11 @@ switch ($sort_option) {
         break;
 }
 
-// Fetch active projects (exclude archived)
+// Fetch only Ongoing and Completed projects (exclude Archived and Pending)
 $query = "SELECT id, name, location, status, created_at 
           FROM projects 
-          WHERE status != 'Archived'
+          WHERE (status = 'Ongoing' OR status = 'Completed') 
+          AND (is_deleted = 0 OR is_deleted IS NULL)
           ORDER BY $order_by";
 $result = $conn->query($query);
 ?>

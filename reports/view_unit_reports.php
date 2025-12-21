@@ -42,10 +42,15 @@ $reports = $conn->query($query);
         </p>
       </div>
 
-      <button class="btn-generate" 
-        onclick="window.location.href='generate_report_pdf.php?unit_id=<?= $unit_id ?>&project_id=<?= $project_id ?>'">
-        Generate Unit PDF
-      </button>
+      <div class="header-buttons">
+        <button class="btn-back" onclick="window.location.href='view_units.php?project_id=<?= $project_id ?>'">
+          <i class="fas fa-arrow-left"></i> Back to Units
+        </button>
+        <button class="btn-generate" 
+          onclick="window.location.href='generate_report_pdf.php?unit_id=<?= $unit_id ?>&project_id=<?= $project_id ?>'">
+          Generate Unit PDF
+        </button>
+      </div>
     </div>
   </div>
 
@@ -132,6 +137,33 @@ $reports = $conn->query($query);
 }
 .btn-generate:hover {
   background-color: #1d4ed8;
+}
+
+/* === Back Button === */
+.btn-back {
+  background: #6b7280;
+  color: #fff;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-back:hover {
+  background: #4b5563;
+}
+
+/* === Header Buttons Container === */
+.header-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 /* === Report Cards === */

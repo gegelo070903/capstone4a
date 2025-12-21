@@ -54,6 +54,9 @@ $result = $conn->query($query);
       </div>
 
       <div class="controls">
+        <button class="btn-back" onclick="window.location.href='reports.php'">
+          <i class="fas fa-arrow-left"></i> Back to Reports
+        </button>
         <input 
           type="text" 
           id="searchInput" 
@@ -190,6 +193,25 @@ function filterUnits() {
 }
 .btn-generate:hover {
   background: #1d4ed8;
+}
+
+/* === Back Button === */
+.btn-back {
+  background: #6b7280;
+  color: #fff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-back:hover {
+  background: #4b5563;
 }
 
 /* === Unit Cards === */

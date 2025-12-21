@@ -16,12 +16,12 @@ if ($id <= 0) {
 
 // Get project name for logging
 $project_name = '';
-$stmt_get = $conn->prepare("SELECT project_name FROM projects WHERE id = ?");
+$stmt_get = $conn->prepare("SELECT name FROM projects WHERE id = ?");
 $stmt_get->bind_param("i", $id);
 $stmt_get->execute();
 $result = $stmt_get->get_result();
 if ($row = $result->fetch_assoc()) {
-    $project_name = $row['project_name'];
+    $project_name = $row['name'];
 }
 $stmt_get->close();
 
@@ -37,7 +37,7 @@ $stmt->bind_param("i", $id);
 if ($stmt->execute()) {
     // Log the archive action
     log_activity($conn, 'ARCHIVE_PROJECT', "Archived project: $project_name (ID: $id)");
-    header("Location: ../uploads/projects.php?status=success&message=" . urlencode("🗑️ Project archived (soft deleted) successfully."));
+    header("Location: ../uploads/projects.php?status=success&message=" . urlencode("Project archived successfully."));
     exit();
 } else {
     echo "<h3 style='color:red'>❌ Soft delete failed: " . htmlspecialchars($stmt->error) . "</h3>";
