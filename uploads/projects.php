@@ -426,7 +426,25 @@ $projects = $stmt->get_result();
 .form-grid {display:grid;grid-template-columns:1fr 1fr;gap:18px 22px;}
 .form-group {display:flex;flex-direction:column;gap:6px;}
 label {font-weight:600;color:#374151;font-size:14px;}
-/* Input/Select styling already handled in controls section */
+/* Input/Select styling for overlay forms */
+.overlay-card input[type="text"],
+.overlay-card input[type="number"],
+.overlay-card select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.overlay-card input:focus,
+.overlay-card select:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
 .overlay-actions {display:flex;justify-content:flex-end;gap:10px;margin-top:25px;}
 @keyframes zoomIn {from{opacity:0;transform:scale(0.95);}to{opacity:1;transform:scale(1);}}
 @media (max-width:640px){.form-grid{grid-template-columns:1fr;}}
@@ -547,12 +565,8 @@ label {font-weight:600;color:#374151;font-size:14px;}
         <div class="form-group"><label>Project/Units</label><input type="number" id="edit_units" name="units" min="1" required></div>
         <div class="form-group">
           <label>Status</label>
-          <select id="edit_status" name="status" required>
-            <option value="Pending">Pending</option>
-            <option value="Ongoing">Ongoing</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option> <!-- Added Cancelled for completeness -->
-          </select>
+          <input type="text" id="edit_status_display" readonly style="background-color:#e5e7eb; cursor:not-allowed;">
+          <input type="hidden" id="edit_status" name="status">
         </div>
       </div>
       <div class="overlay-actions">
@@ -685,6 +699,7 @@ function openEditModal(id){
     document.getElementById('edit_project_name').value=data.name;
     document.getElementById('edit_project_location').value=data.location;
     document.getElementById('edit_units').value=data.units;
+    document.getElementById('edit_status_display').value=data.status;
     document.getElementById('edit_status').value=data.status;
     toggleEditOverlay(true);
   })

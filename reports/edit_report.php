@@ -43,6 +43,29 @@ if (!$report) {
 
 $project_id = $report['project_id'];
 
+// === NEW: Calculate unit progress based on checklist completion ===
+$unit_progress = 0;
+if (!empty($report['unit_id'])) {
+    $progress_stmt = $conn->prepare("
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) as completed
+        FROM project_checklists 
+        WHERE unit_id = ?
+    ");
+    $progress_stmt->bind_param('i', $report['unit_id']);
+    $progress_stmt->execute();
+    $progress_result = $progress_stmt->get_result()->fetch_assoc();
+    $progress_stmt->close();
+    
+    $total_items = (int)($progress_result['total'] ?? 0);
+    $completed_items = (int)($progress_result['completed'] ?? 0);
+    
+    // Calculate percentage
+    $unit_progress = $total_items > 0 ? round(($completed_items / $total_items) * 100) : 0;
+}
+// ===================================================================
+
 // === NEW: SAFE DATE PRE-FILL FOR INPUT ===
 $report_date_value_for_input = date('m-d-Y'); // Default to today in case DB date is bad or new report
 
@@ -112,7 +135,27 @@ if (isset($_POST['update_report'])) {
   // ===============================================
 
 
-  $progress_percentage = $_POST['progress_percentage'];
+  // Calculate progress based on checklist completion (not from POST)
+  $progress_percentage = 0;
+  if (!empty($report['unit_id'])) {
+      $calc_stmt = $conn->prepare("
+          SELECT 
+              COUNT(*) as total,
+              SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) as completed
+          FROM project_checklists 
+          WHERE unit_id = ?
+      ");
+      $calc_stmt->bind_param('i', $report['unit_id']);
+      $calc_stmt->execute();
+      $calc_result = $calc_stmt->get_result()->fetch_assoc();
+      $calc_stmt->close();
+      
+      $total_items = (int)($calc_result['total'] ?? 0);
+      $completed_items = (int)($calc_result['completed'] ?? 0);
+      
+      $progress_percentage = $total_items > 0 ? round(($completed_items / $total_items) * 100) : 0;
+  }
+  
   $work_done = $_POST['work_done'];
   $remarks = $_POST['remarks'];
 
@@ -533,8 +576,8 @@ $unit_display = $unit_name ? "Unit: " . htmlspecialchars($unit_name) : 'General 
         </div>
 
         <div class="form-group">
-          <label>Progress (%)</label>
-          <input type="number" name="progress_percentage" value="<?= htmlspecialchars($report['progress_percentage']); ?>" min="0" max="100" required>
+          <label>Progress (%) - Based on Checklist Completion</label>
+          <input type="number" name="progress_percentage" value="<?= $unit_progress; ?>" min="0" max="100" required readonly style="background-color:#e5e7eb; cursor:not-allowed;">
         </div>
 
         <div class="form-group">

@@ -616,7 +616,7 @@ include '../includes/header.php';
                 $option_label = htmlspecialchars($item['unit_name'] . ' - ' . $item['item_description']);
                 $images_json = htmlspecialchars(json_encode($item['images'] ?? []));
             ?>
-              <option value="<?= $item['id'] ?>" data-images="<?= $images_json ?>">
+              <option value="<?= $item['id'] ?>" data-images="<?= $images_json ?>" data-unit-id="<?= (int)$item['unit_id'] ?>">
                 <?= $option_label ?>
               </option>
             <?php endforeach; ?>
@@ -695,9 +695,9 @@ include '../includes/header.php';
             
             <!-- 3. Progress -->
             <div class="form-group">
-              <label for="edit_progress_percentage">Progress (%)</label>
+              <label for="edit_progress_percentage">Progress (%) - Based on Checklist</label>
               <input type="number" id="edit_progress_percentage" name="progress_percentage"
-                     min="0" max="100" required>
+                     min="0" max="100" required readonly style="background-color:#e5e7eb; cursor:not-allowed;">
             </div>
         </div>
         
@@ -1730,11 +1730,45 @@ document.addEventListener('DOMContentLoaded', () => {
           }
       }
       
+      // Function to filter checklist items by selected unit
+      function filterChecklistByUnit() {
+          const selectedUnitId = unitSelect.value;
+          const options = workDoneSelect.querySelectorAll('option');
+          
+          // Reset the work done selection
+          workDoneSelect.value = '';
+          workDoneHidden.value = '';
+          imagesContainer.innerHTML = '<p id="image-placeholder" style="color:#6b7280;">Select a checklist item above to load its proof images.</p>';
+          imagePathsInput.value = '';
+          
+          options.forEach(option => {
+              if (option.value === '') {
+                  // Keep the placeholder option visible
+                  option.style.display = '';
+                  return;
+              }
+              
+              const optionUnitId = option.getAttribute('data-unit-id');
+              if (selectedUnitId && optionUnitId === selectedUnitId) {
+                  option.style.display = '';
+              } else if (selectedUnitId) {
+                  option.style.display = 'none';
+              } else {
+                  // If no unit selected, hide all options except placeholder
+                  option.style.display = 'none';
+              }
+          });
+      }
+      
       // Use addEventListener for more reliable event binding
-      unitSelect.addEventListener('change', updateProgressFromUnit);
+      unitSelect.addEventListener('change', function() {
+          updateProgressFromUnit();
+          filterChecklistByUnit();
+      });
       
       // Call once on load for initial prefill (if a unit is pre-selected)
       updateProgressFromUnit();
+      filterChecklistByUnit();
 
       // === Work Done (Checklist) Logic ===
       workDoneSelect.onchange = function() {

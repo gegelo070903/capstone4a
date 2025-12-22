@@ -204,15 +204,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selected_unit_id = (int)($_GET['unit_id'] ?? 0);
 }
 
-// Optional: prefill progress from the chosen unit so "Progress (%)" matches unit progress
+// Optional: prefill progress from the chosen unit based on checklist completion
 if ($selected_unit_id > 0) {
-    $pu = $conn->prepare("SELECT progress FROM project_units WHERE id = ? AND project_id = ?");
-    $pu->bind_param('ii', $selected_unit_id, $project_id);
+    $pu = $conn->prepare("
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) as completed
+        FROM project_checklists 
+        WHERE unit_id = ?
+    ");
+    $pu->bind_param('i', $selected_unit_id);
     $pu->execute();
-    // Using fetch_assoc for better safety/readability than directly indexing the array
     $progress_row = $pu->get_result()->fetch_assoc();
-    $prefill_progress = (int)($progress_row['progress'] ?? 0);
     $pu->close();
+    
+    $total_items = (int)($progress_row['total'] ?? 0);
+    $completed_items = (int)($progress_row['completed'] ?? 0);
+    $prefill_progress = $total_items > 0 ? round(($completed_items / $total_items) * 100) : 0;
 }
 
 
@@ -416,10 +424,11 @@ $report_date_value = htmlspecialchars($_POST['report_date'] ?? date('m-d-Y'));
         </div>
 
         <div class="form-group">
-          <label for="progress_percentage">Progress (%)</label>
-          <!-- 3) Prefill the Progress input (re-enabled as editable) -->
+          <label for="progress_percentage">Progress (%) - Based on Checklist</label>
+          <!-- Progress is now readonly and prefilled from unit's checklist completion -->
           <input type="number" id="progress_percentage" name="progress_percentage"
-                 value="<?= $progress_value ?>" min="0" max="100" required>
+                 value="<?= $progress_value ?>" min="0" max="100" required readonly 
+                 style="background-color:#e5e7eb; cursor:not-allowed;">
         </div>
 
         <div class="form-group">
