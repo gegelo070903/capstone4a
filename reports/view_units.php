@@ -25,20 +25,23 @@ if (!$project) {
 $sort_option = $_GET['sort'] ?? 'latest';
 switch ($sort_option) {
     case 'oldest':
-        $order_by = 'created_at ASC';
+        $order_by = 'pu.created_at ASC';
         break;
     case 'name':
-        $order_by = 'name ASC';
+        $order_by = 'pu.name ASC';
         break;
     default:
-        $order_by = 'created_at DESC';
+        $order_by = 'pu.created_at DESC';
         break;
 }
 
-// Fetch all units for this project
-$query = "SELECT id, name, progress, created_at 
-          FROM project_units 
-          WHERE project_id = $project_id 
+// Fetch all units for this project with CALCULATED progress from checklist items
+// This ensures consistency with view_project.php
+$query = "SELECT pu.id, pu.name, pu.created_at,
+                 (SELECT COUNT(*) FROM project_checklists pc WHERE pc.unit_id = pu.id) as total_items,
+                 (SELECT COUNT(*) FROM project_checklists pc WHERE pc.unit_id = pu.id AND pc.is_completed = 1) as completed_items
+          FROM project_units pu
+          WHERE pu.project_id = $project_id 
           ORDER BY $order_by";
 $result = $conn->query($query);
 ?>
@@ -81,18 +84,23 @@ $result = $conn->query($query);
   <!-- 🧱 Unit Cards -->
   <div class="unit-grid" id="unitGrid">
     <?php if ($result && $result->num_rows > 0): ?>
-      <?php while ($unit = $result->fetch_assoc()): ?>
+      <?php while ($unit = $result->fetch_assoc()): 
+        // Calculate progress dynamically from checklist items (same as view_project.php)
+        $total_items = (int)$unit['total_items'];
+        $completed_items = (int)$unit['completed_items'];
+        $calculated_progress = $total_items > 0 ? round(($completed_items / $total_items) * 100) : 0;
+      ?>
         <div class="unit-card" 
              data-name="<?= strtolower($unit['name']) ?>"
              onclick="window.location.href='view_unit_reports.php?unit_id=<?= $unit['id'] ?>&project_id=<?= $project_id ?>'">
 
           <div class="unit-header">
             <h3><?= htmlspecialchars($unit['name']) ?></h3>
-            <span class="progress-badge"><?= $unit['progress'] ?>%</span>
+            <span class="progress-badge"><?= $calculated_progress ?>%</span>
           </div>
 
           <div class="progress-bar">
-            <div class="progress-fill" style="width: <?= $unit['progress'] ?>%;"></div>
+            <div class="progress-fill" style="width: <?= $calculated_progress ?>%;"></div>
           </div>
 
           <p><strong>Created:</strong> <?= date('M d, Y', strtotime($unit['created_at'])) ?></p>
