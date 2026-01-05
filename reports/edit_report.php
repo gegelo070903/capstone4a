@@ -105,8 +105,8 @@ while ($m = $all_materials_res->fetch_assoc()) {
 $images = $conn->query("SELECT * FROM report_images WHERE report_id = $report_id"); // FIX: Corrected table name
 
 
-// ✅ Update report
-if (isset($_POST['update_report'])) {
+// ✅ Update report - support both regular form submission and AJAX (FormData doesn't include submit button)
+if (isset($_POST['update_report']) || ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['report_date']))) {
   
   // ===============================================
   // ✅ REPLACEMENT START: UNIFIED DATE LOGIC BLOCK (FIXED FOR MM-DD-YYYY)
@@ -178,17 +178,19 @@ if (isset($_POST['update_report'])) {
       WHERE id=?
     ");
     
-    // ✅ FIX: Corrected bind string to 'sisss' (5 characters for 5 question marks)
+    // ✅ FIX: Corrected bind string to 'sissi' (5 characters for 5 question marks)
     // Parameters: report_date (s), progress_percentage (i), work_done (s), remarks (s), report_id (i)
-    $update_stmt->bind_param("sisss", $report_date, $progress_percentage_int, $work_done, $remarks, $report_id);
+    $update_stmt->bind_param("sissi", $report_date, $progress_percentage_int, $work_done, $remarks, $report_id);
     
     if (!$update_stmt->execute()) throw new Exception('Failed to update report record: ' . $update_stmt->error);
     $update_stmt->close();
 
 
-    // 2. Update unit progress (as it might have changed)
-    [$ok, $msg] = update_unit_progress($conn, $report['unit_id'], (int)$progress_percentage);
-    if (!$ok) throw new Exception("Failed to update unit progress: $msg");
+    // 2. Update unit progress (as it might have changed) - only if unit_id exists
+    if (!empty($report['unit_id'])) {
+        [$ok, $msg] = update_unit_progress($conn, (int)$report['unit_id'], (int)$progress_percentage);
+        if (!$ok) throw new Exception("Failed to update unit progress: $msg");
+    }
 
 
     // 3. Handle NEW material usage (using UPSET logic)

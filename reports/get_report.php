@@ -26,6 +26,17 @@ if (!$report) {
     exit;
 }
 
+// Fetch unit name
+$unit_name = 'N/A';
+if (!empty($report['unit_id'])) {
+    $unit_stmt = $conn->prepare("SELECT name FROM project_units WHERE id = ?");
+    $unit_stmt->bind_param("i", $report['unit_id']);
+    $unit_stmt->execute();
+    $unit_result = $unit_stmt->get_result()->fetch_assoc();
+    $unit_name = $unit_result['name'] ?? 'N/A';
+    $unit_stmt->close();
+}
+
 // Format date for display (MM-DD-YYYY)
 $report_date_formatted = '';
 if ($report['report_date'] && $report['report_date'] !== '0000-00-00') {
@@ -65,10 +76,12 @@ echo json_encode([
         'id' => $report['id'],
         'project_id' => $report['project_id'],
         'unit_id' => $report['unit_id'],
+        'unit_name' => $unit_name,
         'report_date' => $report_date_formatted,
         'progress_percentage' => (int)$report['progress_percentage'],
         'work_done' => $report['work_done'],
         'remarks' => $report['remarks'] ?? '',
+        'created_by' => $report['created_by'] ?? '',
         'materials_used' => $materials_used,
         'images' => $images
     ]

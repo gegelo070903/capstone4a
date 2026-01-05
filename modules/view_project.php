@@ -124,15 +124,16 @@ if ($ms) {
 
 // 2. Fetch COMPLETED checklist items with images for the "Work Done" dropdown
 // Now using the new checklist_images table for multiple images support
+// Ordered by completed_at DESC to show most recently completed items first
 $checklist_items = [];
 $sql_checklist = "
-    SELECT pc.id, pc.item_description, pc.unit_id, pu.name AS unit_name,
+    SELECT pc.id, pc.item_description, pc.unit_id, pc.completed_at, pu.name AS unit_name,
            (SELECT COUNT(*) FROM checklist_images ci WHERE ci.checklist_id = pc.id) as image_count
     FROM project_checklists pc
     JOIN project_units pu ON pc.unit_id = pu.id
     WHERE pc.project_id = ? AND pc.is_completed = 1
     AND EXISTS (SELECT 1 FROM checklist_images ci WHERE ci.checklist_id = pc.id)
-    ORDER BY pu.name ASC, pc.item_description ASC
+    ORDER BY pc.completed_at DESC, pu.name ASC, pc.item_description ASC
 ";
 $check_stmt = $conn->prepare($sql_checklist);
 
@@ -355,7 +356,7 @@ include '../includes/header.php';
                   <!-- ✅ FIX: Use the safely formatted date -->
                   <strong><?= htmlspecialchars($display_date); ?></strong>
                   <div class="report-actions">
-                    <a href="../reports/view_report.php?id=<?= $r['id']; ?>" class="btn-view">View</a>
+                    <button type="button" class="btn-view" onclick="openViewReportOverlay(<?= $r['id']; ?>)">View</button>
                     <button type="button" class="btn-edit" onclick="openEditReportOverlay(<?= $r['id']; ?>)">Edit</button>
                     <a href="../reports/delete_report.php?id=<?= $r['id']; ?>&project_id=<?= $project_id; ?>"
                        class="btn-delete"
@@ -750,6 +751,28 @@ include '../includes/header.php';
   </div>
 </div>
 <!-- END EDIT REPORT OVERLAY -->
+
+<!-- ======================================================= -->
+<!-- ✅ VIEW REPORT OVERLAY -->
+<!-- ======================================================= -->
+<div class="overlay" id="viewReportOverlay">
+  <div class="overlay-card" style="max-width: 700px;">
+    <button class="close-btn" onclick="toggleViewReportOverlay(false)">✕</button>
+    <h3 class="overlay-title" id="view-report-title">View Report</h3>
+
+    <div class="report-details" id="view-report-content">
+      <p style="color:#6b7280;">Loading report...</p>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-primary" id="view-report-edit-btn" onclick="">Edit Report</button>
+      <button type="button" class="btn-cancel" onclick="toggleViewReportOverlay(false)">Close</button>
+    </div>
+  </div>
+</div>
+<!-- END VIEW REPORT OVERLAY -->
 
 <style>
 /* ====== BASE STYLES (UNCHANGED) ====== */
@@ -1419,6 +1442,100 @@ function openEditMaterialOverlay(materialId, name, totalQuantity, unit, supplier
   toggleEditMaterialOverlay(true);
 }
 
+// ✅ View Report Overlay Functions
+function toggleViewReportOverlay(show) {
+  document.getElementById('viewReportOverlay').style.display = show ? 'flex' : 'none';
+  if (!show) {
+    document.getElementById('view-report-content').innerHTML = '<p style="color:#6b7280;">Loading report...</p>';
+  }
+}
+
+function openViewReportOverlay(reportId) {
+  // Show loading state
+  toggleViewReportOverlay(true);
+  
+  fetch(`../reports/get_report.php?id=${reportId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) {
+        showToast(data.message || 'Failed to load report data', 'error');
+        toggleViewReportOverlay(false);
+        return;
+      }
+      
+      const r = data.report;
+      
+      // Update title
+      document.getElementById('view-report-title').textContent = `Report — ${r.unit_name || 'General'}`;
+      
+      // Format date (r.report_date is in MM-DD-YYYY format)
+      let displayDate = 'Date Not Set';
+      if (r.report_date && r.report_date !== '0000-00-00') {
+        // Parse MM-DD-YYYY format
+        const parts = r.report_date.split('-');
+        if (parts.length === 3) {
+          const dateObj = new Date(parts[2], parts[0] - 1, parts[1]); // year, month (0-indexed), day
+          displayDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+      }
+      
+      // Build content HTML
+      let html = `
+        <p><strong>Date:</strong> ${displayDate}</p>
+        <p><strong>Unit:</strong> ${r.unit_name || 'N/A'}</p>
+        <p><strong>Progress:</strong> ${r.progress_percentage || 0}%</p>
+        <p><strong>Created By:</strong> ${r.created_by || 'N/A'}</p>
+        <p><strong>Remarks:</strong> ${r.remarks || 'None'}</p>
+        
+        <div class="section-divider"></div>
+        
+        <h4>Work Done</h4>
+        <p>${r.work_done || 'No description provided.'}</p>
+        
+        <div class="section-divider"></div>
+        
+        <h4>Materials Used</h4>
+      `;
+      
+      if (r.materials_used && r.materials_used.length > 0) {
+        html += '<table style="width:100%; font-size:13px; margin-top:10px;"><thead><tr><th style="text-align:left;">Material</th><th style="text-align:center;">Qty Used</th><th style="text-align:center;">Unit</th></tr></thead><tbody>';
+        r.materials_used.forEach(m => {
+          html += `<tr><td>${m.name}</td><td style="text-align:center;">${m.quantity_used}</td><td style="text-align:center;">${m.unit_of_measurement}</td></tr>`;
+        });
+        html += '</tbody></table>';
+      } else {
+        html += '<p style="color:#888;">No materials recorded for this report.</p>';
+      }
+      
+      html += '<div class="section-divider"></div><h4>Proof Images</h4>';
+      
+      if (r.images && r.images.length > 0) {
+        html += '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;">';
+        r.images.forEach(img => {
+          html += `<a href="../reports/report_images/${img.image_path}" target="_blank">
+            <img src="../reports/report_images/${img.image_path}" style="width:100px; height:100px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb; cursor:pointer;">
+          </a>`;
+        });
+        html += '</div>';
+      } else {
+        html += '<p style="color:#888;">No proof images uploaded.</p>';
+      }
+      
+      document.getElementById('view-report-content').innerHTML = html;
+      
+      // Set edit button action
+      document.getElementById('view-report-edit-btn').onclick = function() {
+        toggleViewReportOverlay(false);
+        openEditReportOverlay(reportId);
+      };
+    })
+    .catch(err => {
+      console.error(err);
+      showToast('Error loading report data.', 'error');
+      toggleViewReportOverlay(false);
+    });
+}
+
 // ✅ Edit Report Overlay Functions
 function toggleEditReportOverlay(show) {
   document.getElementById('editReportOverlay').style.display = show ? 'flex' : 'none';
@@ -1632,7 +1749,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editAddMatBtn = document.getElementById('edit-add-material-row');
     
     function editRowTemplate() {
-      let opts = MATS_DATA.map(m => `
+      let opts = MATS_DATA.filter(m => m.remaining_quantity > 0).map(m => `
         <option value="${m.id}" data-rem="${m.remaining_quantity}" data-uom="${m.unit_of_measurement}">
           ${m.name} (rem: ${Math.floor(m.remaining_quantity)} ${m.unit_of_measurement})
         </option>`).join('');
@@ -1810,7 +1927,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // === Materials Logic ===
       function rowTemplate(idx) {
-        let opts = MATS_DATA.map(m => `
+        let opts = MATS_DATA.filter(m => m.remaining_quantity > 0).map(m => `
           <option value="${m.id}" data-rem="${m.remaining_quantity}" data-uom="${m.unit_of_measurement}">
             ${m.name} (rem: ${Math.floor(m.remaining_quantity)} ${m.unit_of_measurement})
           </option>`).join('');
