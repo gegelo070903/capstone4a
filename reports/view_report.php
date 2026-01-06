@@ -49,13 +49,27 @@ $img_stmt->execute();
 $res = $img_stmt->get_result();
 while ($r = $res->fetch_assoc()) $images[] = $r;
 $img_stmt->close();
+
+// Determine back URL based on where the user came from
+$from = $_GET['from'] ?? '';
+$unit_id_param = $_GET['unit_id'] ?? $report['unit_id'];
+$project_id_param = $_GET['project_id'] ?? $project_id;
+
+if ($from === 'reports') {
+    $back_url = "view_unit_reports.php?unit_id=" . (int)$unit_id_param . "&project_id=" . (int)$project_id_param;
+} else {
+    $back_url = "../modules/view_project.php?id=" . (int)$project_id . "&tab=reports";
+}
+
+// Build query params to pass to edit/delete for proper navigation
+$nav_params = ($from === 'reports') ? "&from=reports&unit_id=" . (int)$unit_id_param . "&project_id=" . (int)$project_id_param : "";
 ?>
 
 <div class="content-wrapper">
   <div class="form-card">
     <div class="form-header-row">
       <h2>Project Report — <?= htmlspecialchars($project_name) ?></h2>
-      <a href="../modules/view_project.php?id=<?= $project_id ?>&tab=reports" class="btn-back-black">← Back</a>
+      <a href="<?= $back_url ?>" class="btn-back-black">← Back</a>
     </div>
 
     <div class="report-details">
@@ -88,8 +102,8 @@ $img_stmt->close();
       <div class="section-divider"></div>
 
       <div class="form-actions">
-        <a href="edit_report.php?id=<?= $report_id ?>" class="btn-primary">Edit Report</a>
-        <a href="delete_report.php?id=<?= $report_id ?>" class="btn-danger"
+        <a href="edit_report.php?id=<?= $report_id ?><?= $nav_params ?>" class="btn-primary">Edit Report</a>
+        <a href="delete_report.php?id=<?= $report_id ?><?= $nav_params ?>" class="btn-danger"
            onclick="return confirm('Are you sure you want to delete this report? This action cannot be undone.');">
            Delete Report
         </a>

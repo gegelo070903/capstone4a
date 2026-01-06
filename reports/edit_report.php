@@ -43,6 +43,20 @@ if (!$report) {
 
 $project_id = $report['project_id'];
 
+// Determine back URL based on where the user came from
+$from = $_GET['from'] ?? $_POST['from'] ?? '';
+$unit_id_param = $_GET['unit_id'] ?? $_POST['unit_id'] ?? $report['unit_id'];
+$project_id_param = $_GET['project_id'] ?? $_POST['project_id'] ?? $project_id;
+
+if ($from === 'reports') {
+    $back_url = "view_unit_reports.php?unit_id=" . (int)$unit_id_param . "&project_id=" . (int)$project_id_param;
+} else {
+    $back_url = "../modules/view_project.php?id=" . (int)$project_id . "&tab=reports";
+}
+
+// Build query params to pass for proper navigation
+$nav_params = ($from === 'reports') ? "&from=reports&unit_id=" . (int)$unit_id_param . "&project_id=" . (int)$project_id_param : "";
+
 // === NEW: Calculate unit progress based on checklist completion ===
 $unit_progress = 0;
 if (!empty($report['unit_id'])) {
@@ -254,7 +268,13 @@ if (isset($_POST['update_report']) || ($isAjax && $_SERVER['REQUEST_METHOD'] ===
       echo json_encode(['success' => true, 'message' => 'Report updated successfully!']);
       exit;
     }
-    header("Location: ../modules/view_project.php?id=$project_id&tab=reports&status=success&message=" . urlencode("Report updated successfully!"));
+    
+    // Redirect based on where the user came from
+    if ($from === 'reports') {
+        header("Location: view_unit_reports.php?unit_id=" . (int)$unit_id_param . "&project_id=" . (int)$project_id_param . "&status=success&message=" . urlencode("Report updated successfully!"));
+    } else {
+        header("Location: ../modules/view_project.php?id=$project_id&tab=reports&status=success&message=" . urlencode("Report updated successfully!"));
+    }
     exit;
 
   } catch (Exception $e) {
@@ -635,8 +655,13 @@ $unit_display = $unit_name ? "Unit: " . htmlspecialchars($unit_name) : 'General 
 
         <div class="form-actions">
           <button type="submit" name="update_report" class="btn-primary">Update Report</button>
-          <a href="../modules/view_project.php?id=<?= $project_id; ?>&tab=reports" class="btn-cancel">Cancel</a>
+          <a href="<?= $back_url; ?>" class="btn-cancel">Cancel</a>
         </div>
+        
+        <!-- Hidden fields to preserve navigation context -->
+        <input type="hidden" name="from" value="<?= htmlspecialchars($from); ?>">
+        <input type="hidden" name="unit_id" value="<?= (int)$unit_id_param; ?>">
+        <input type="hidden" name="project_id" value="<?= (int)$project_id_param; ?>">
       </form>
     </div>
   </div>

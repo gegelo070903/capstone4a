@@ -4,22 +4,35 @@ require_once __DIR__ . '/../includes/functions.php';
 require_login();
 
 $report_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$project_id = isset($_GET['project_id']) ? (int)$_GET['project_id'] : 0;
 
-if ($report_id <= 0 || $project_id <= 0) {
+if ($report_id <= 0) {
     die('Invalid request.');
 }
 
-// Get report date for logging
-$report_date = '';
-$stmt_get = $conn->prepare("SELECT report_date FROM project_reports WHERE id = ?");
-$stmt_get->bind_param("i", $report_id);
-$stmt_get->execute();
-$result = $stmt_get->get_result();
-if ($row = $result->fetch_assoc()) {
-    $report_date = $row['report_date'];
+// Fetch report info including project_id
+$stmt = $conn->prepare("SELECT project_id, unit_id, report_date FROM project_reports WHERE id = ?");
+$stmt->bind_param("i", $report_id);
+$stmt->execute();
+$report = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if (!$report) {
+    die('Report not found.');
 }
-$stmt_get->close();
+
+$project_id = (int)$report['project_id'];
+$report_date = $report['report_date'];
+
+// Determine redirect URL based on where the user came from
+$from = $_GET['from'] ?? '';
+$unit_id_param = $_GET['unit_id'] ?? $report['unit_id'];
+$project_id_param = $_GET['project_id'] ?? $project_id;
+
+if ($from === 'reports') {
+    $redirect_url = "view_unit_reports.php?unit_id=" . (int)$unit_id_param . "&project_id=" . (int)$project_id_param;
+} else {
+    $redirect_url = "../modules/view_project.php?id=$project_id&tab=reports";
+}
 
 try {
     $conn->begin_transaction();
@@ -62,7 +75,7 @@ try {
     // Log the delete action
     log_activity($conn, 'DELETE_REPORT', "Deleted report ID: $report_id (Date: $report_date) from project ID: $project_id");
 
-    header("Location: ../modules/view_project.php?id=$project_id&tab=reports");
+    header("Location: $redirect_url");
     exit;
 
 } catch (Exception $e) {
